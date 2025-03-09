@@ -53,9 +53,14 @@ The bot supports the following commands:
 
 | Command                   | Description                                 | Who Can Use?  |
 |---------------------------|---------------------------------------------|--------------|
-| /show_rooms              | Show a list of available rooms.             | Everyone    |
-| /join_room <room_name>   | Join a specific room.                       | Everyone    |
-| /create_room <room_name> | Create a new room (Admin Only).             | Admins Only |
+| /start                   | Start the bot                               | Everyone    |
+| /help                    | Show this help message                      | Everyone    |
+| /create_room <room_name> | Create a new room                           | Admins Only |
+| /join_room <room_id>     | Join a specific room                        | Everyone    |
+| /leave_room <room_id>    | Leave a specific room                       | Everyone    |
+| /list_rooms              | List all available rooms                    | Everyone    |
+| /my_rooms                | List rooms you have joined                  | Everyone    |
+| /kick_user               | Kick a user from a room                     | Admins Only |
 
 ---
 
