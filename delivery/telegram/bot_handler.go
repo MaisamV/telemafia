@@ -18,6 +18,7 @@ type BotHandler struct {
 	getRoomsHandler         *roomQuery.GetRoomsHandler
 	getPlayerRoomsHandler   *roomQuery.GetPlayerRoomsHandler
 	getPlayersInRoomHandler *roomQuery.GetPlayersInRoomHandler
+	deleteRoomHandler       *roomCommand.DeleteRoomHandler
 }
 
 // NewBotHandler creates a new BotHandler
@@ -31,6 +32,7 @@ func NewBotHandler(
 	getRoomsHandler *roomQuery.GetRoomsHandler,
 	getPlayerRoomsHandler *roomQuery.GetPlayerRoomsHandler,
 	getPlayersInRoomHandler *roomQuery.GetPlayersInRoomHandler,
+	deleteRoomHandler *roomCommand.DeleteRoomHandler,
 ) *BotHandler {
 	return &BotHandler{
 		bot:                     bot,
@@ -42,6 +44,7 @@ func NewBotHandler(
 		getRoomsHandler:         getRoomsHandler,
 		getPlayerRoomsHandler:   getPlayerRoomsHandler,
 		getPlayersInRoomHandler: getPlayersInRoomHandler,
+		deleteRoomHandler:       deleteRoomHandler,
 	}
 }
 
@@ -65,5 +68,6 @@ func (h *BotHandler) RegisterHandlers() {
 	h.bot.Handle("/list_rooms", h.HandleListRooms)
 	h.bot.Handle("/my_rooms", h.HandleMyRooms)
 	h.bot.Handle("/kick_user", h.HandleKickUser)
+	h.bot.Handle("/delete_room", h.HandleDeleteRoom)
 	h.bot.Handle(telebot.OnCallback, h.HandleCallback)
 }

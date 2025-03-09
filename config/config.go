@@ -5,7 +5,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"gopkg.in/telebot.v3"
 	"log"
 	"os"
 	"strings"
@@ -16,6 +15,8 @@ import (
 	roomQuery "telemafia/internal/room/usecase/query"
 	"telemafia/pkg/event"
 	"time"
+
+	"gopkg.in/telebot.v3"
 )
 
 // Config holds the application configuration
@@ -101,12 +102,12 @@ func InitializeDependencies(cfg *Config) (*telegram.BotHandler, error) {
 	joinRoomHandler := roomCommand.NewJoinRoomHandler(roomRepo, eventPublisher)
 	leaveRoomHandler := roomCommand.NewLeaveRoomHandler(roomRepo, eventPublisher)
 	kickUserHandler := roomCommand.NewKickUserHandler(roomRepo, eventPublisher)
+	deleteRoomHandler := roomCommand.NewDeleteRoomHandler(roomRepo)
 
 	// Initialize query handlers
 	getRoomsHandler := roomQuery.NewGetRoomsHandler(roomRepo)
 	getPlayerRoomsHandler := roomQuery.NewGetPlayerRoomsHandler(roomRepo)
 	getPlayersInRoomsHandler := roomQuery.NewGetPlayersInRoomHandler(roomRepo)
-
 	// Initialize bot handler
 	botHandler := telegram.NewBotHandler(
 		telegramBot,
@@ -118,6 +119,7 @@ func InitializeDependencies(cfg *Config) (*telegram.BotHandler, error) {
 		getRoomsHandler,
 		getPlayerRoomsHandler,
 		getPlayersInRoomsHandler,
+		deleteRoomHandler,
 	)
 
 	return botHandler, nil

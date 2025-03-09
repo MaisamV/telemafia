@@ -125,3 +125,16 @@ func (r *InMemoryRepository) GetPlayersInRoom(roomID entity.RoomID) ([]*userEnti
 
 	return room.Players, nil
 }
+
+// DeleteRoom deletes a room by ID
+func (r *InMemoryRepository) DeleteRoom(roomID entity.RoomID) error {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	if _, exists := r.rooms[roomID]; !exists {
+		return error2.ErrRoomNotFound
+	}
+
+	delete(r.rooms, roomID)
+	return nil
+}

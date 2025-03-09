@@ -30,6 +30,9 @@ type RoomWriter interface {
 
 	// RemovePlayerFromRoom Remove a player from a room
 	RemovePlayerFromRoom(roomID entity.RoomID, playerID userEntity.UserID) error
+
+	// DeleteRoom deletes a room by ID
+	DeleteRoom(roomID entity.RoomID) error
 }
 
 // Repository defines the interface for room persistence

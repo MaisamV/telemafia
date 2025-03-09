@@ -2,8 +2,9 @@ package telegram
 
 import (
 	"fmt"
-	"gopkg.in/telebot.v3"
 	"strings"
+
+	"gopkg.in/telebot.v3"
 )
 
 // Unique identifiers for inline buttons
@@ -11,6 +12,7 @@ const (
 	UniqueJoinToRoom         = "join"
 	UniqueKickFromRoom       = "kick"
 	UniqueKickPlayerFromRoom = "kick_player"
+	UniqueDeleteRoom         = "delete_room"
 )
 
 func (h *BotHandler) HandleCallback(c telebot.Context) error {
@@ -31,7 +33,9 @@ func (h *BotHandler) HandleCallback(c telebot.Context) error {
 		return h.HandleKickUserCallback(c, data)
 	} else if unique == UniqueKickPlayerFromRoom {
 		return h.HandleKickUserFromRoomCallback(c, data)
+	} else if unique == UniqueDeleteRoom {
+		return h.HandleDeleteRoomCallback(c, data)
 	}
-	fmt.Println("no enter")
+	fmt.Println("button command not found")
 	return c.Respond()
 }
