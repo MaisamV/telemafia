@@ -103,11 +103,13 @@ func InitializeDependencies(cfg *Config) (*telegram.BotHandler, error) {
 	leaveRoomHandler := roomCommand.NewLeaveRoomHandler(roomRepo, eventPublisher)
 	kickUserHandler := roomCommand.NewKickUserHandler(roomRepo, eventPublisher)
 	deleteRoomHandler := roomCommand.NewDeleteRoomHandler(roomRepo)
+	resetChangeFlagHandler := roomCommand.NewResetChangeFlagCommand(roomRepo)
 
 	// Initialize query handlers
 	getRoomsHandler := roomQuery.NewGetRoomsHandler(roomRepo)
 	getPlayerRoomsHandler := roomQuery.NewGetPlayerRoomsHandler(roomRepo)
 	getPlayersInRoomsHandler := roomQuery.NewGetPlayersInRoomHandler(roomRepo)
+	checkChangeFlagHandler := roomQuery.NewCheckChangeFlagHandler(roomRepo)
 	// Initialize bot handler
 	botHandler := telegram.NewBotHandler(
 		telegramBot,
@@ -116,10 +118,12 @@ func InitializeDependencies(cfg *Config) (*telegram.BotHandler, error) {
 		joinRoomHandler,
 		leaveRoomHandler,
 		kickUserHandler,
+		deleteRoomHandler,
+		resetChangeFlagHandler,
 		getRoomsHandler,
 		getPlayerRoomsHandler,
 		getPlayersInRoomsHandler,
-		deleteRoomHandler,
+		checkChangeFlagHandler,
 	)
 
 	return botHandler, nil

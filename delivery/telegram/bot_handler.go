@@ -1,6 +1,8 @@
 package telegram
 
 import (
+	"log"
+	"os"
 	roomCommand "telemafia/internal/room/usecase/command"
 	roomQuery "telemafia/internal/room/usecase/query"
 
@@ -15,10 +17,12 @@ type BotHandler struct {
 	joinRoomHandler         *roomCommand.JoinRoomHandler
 	leaveRoomHandler        *roomCommand.LeaveRoomHandler
 	kickUserHandler         *roomCommand.KickUserHandler
+	deleteRoomHandler       *roomCommand.DeleteRoomHandler
+	resetRefreshHandler     *roomCommand.ResetChangeFlagHandler
 	getRoomsHandler         *roomQuery.GetRoomsHandler
 	getPlayerRoomsHandler   *roomQuery.GetPlayerRoomsHandler
 	getPlayersInRoomHandler *roomQuery.GetPlayersInRoomHandler
-	deleteRoomHandler       *roomCommand.DeleteRoomHandler
+	checkRefreshHandler     *roomQuery.CheckChangeFlagHandler
 }
 
 // NewBotHandler creates a new BotHandler
@@ -29,10 +33,12 @@ func NewBotHandler(
 	joinRoomHandler *roomCommand.JoinRoomHandler,
 	leaveRoomHandler *roomCommand.LeaveRoomHandler,
 	kickUserHandler *roomCommand.KickUserHandler,
+	deleteRoomHandler *roomCommand.DeleteRoomHandler,
+	resetRefreshHandler *roomCommand.ResetChangeFlagHandler,
 	getRoomsHandler *roomQuery.GetRoomsHandler,
 	getPlayerRoomsHandler *roomQuery.GetPlayerRoomsHandler,
 	getPlayersInRoomHandler *roomQuery.GetPlayersInRoomHandler,
-	deleteRoomHandler *roomCommand.DeleteRoomHandler,
+	checkRefreshHandler *roomQuery.CheckChangeFlagHandler,
 ) *BotHandler {
 	return &BotHandler{
 		bot:                     bot,
@@ -41,14 +47,19 @@ func NewBotHandler(
 		joinRoomHandler:         joinRoomHandler,
 		leaveRoomHandler:        leaveRoomHandler,
 		kickUserHandler:         kickUserHandler,
+		deleteRoomHandler:       deleteRoomHandler,
+		resetRefreshHandler:     resetRefreshHandler,
 		getRoomsHandler:         getRoomsHandler,
 		getPlayerRoomsHandler:   getPlayerRoomsHandler,
 		getPlayersInRoomHandler: getPlayersInRoomHandler,
-		deleteRoomHandler:       deleteRoomHandler,
+		checkRefreshHandler:     checkRefreshHandler,
 	}
 }
 
 func (h *BotHandler) Start() {
+	logger := log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime)
+	logger.Println("Test")
+	go h.RefreshRoomsList() // Start the goroutine to refresh room lists
 	h.bot.Start()
 }
 
