@@ -31,6 +31,15 @@ var (
 
 // HandleListRooms handles the /list_rooms command
 func (h *BotHandler) HandleListRooms(c telebot.Context) error {
+	// Delete the previous list rooms response if it exists
+	messageIDsMutex.RLock()
+	prevMsgID, exists := messageIDs[c.Sender().ID]
+	delete(messageIDs, c.Sender().ID)
+	messageIDsMutex.RUnlock()
+	if exists {
+		c.Bot().Delete(&telebot.Message{ID: prevMsgID, Chat: &telebot.Chat{ID: c.Sender().ID}})
+	}
+
 	rooms, err := h.getRoomsHandler.Handle(context.Background(), roomQuery.GetRoomsQuery{})
 	if err != nil {
 		return c.Respond(&telebot.CallbackResponse{Text: fmt.Sprintf("Error getting rooms: %v", err)})
