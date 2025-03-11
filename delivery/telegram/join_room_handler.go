@@ -20,9 +20,8 @@ func (h *BotHandler) HandleJoinRoom(c telebot.Context) error {
 	user := util.ToUser(c.Sender())
 	// Join room
 	cmd := roomCommand.JoinRoomCommand{
-		RoomID:   entity.RoomID(args),
-		PlayerID: user.ID,
-		Name:     user.Username,
+		RoomID: entity.RoomID(args),
+		Player: *user,
 	}
 	if err := h.joinRoomHandler.Handle(context.Background(), cmd); err != nil {
 		return c.Send(errorHandler.HandleError(err, "Error joining room"))

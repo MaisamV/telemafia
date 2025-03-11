@@ -13,6 +13,7 @@ const (
 	UniqueKickSelectRoom           = "kick_selectRoom"
 	UniqueKickFromRoomSelectPlayer = "kickFromRoom_selectPlayer"
 	UniqueDeleteRoomSelectRoom     = "deleteRoom_selectRoom"
+	UniqueLeaveRoomSelectRoom      = "leaveRoom_selectRoom"
 )
 
 func (h *BotHandler) HandleCallback(c telebot.Context) error {
@@ -35,6 +36,8 @@ func (h *BotHandler) HandleCallback(c telebot.Context) error {
 		return h.HandleKickUserFromRoomCallback(c, data)
 	} else if unique == UniqueDeleteRoomSelectRoom {
 		return h.HandleDeleteRoomCallback(c, data)
+	} else if unique == UniqueLeaveRoomSelectRoom {
+		return h.HandleLeaveRoomCallback(c, data)
 	}
 	fmt.Println("button command not found")
 	return c.Respond()

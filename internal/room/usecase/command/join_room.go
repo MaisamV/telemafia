@@ -11,9 +11,8 @@ import (
 
 // JoinRoomCommand represents the command to join a room
 type JoinRoomCommand struct {
-	RoomID   entity.RoomID
-	PlayerID userEntity.UserID
-	Name     string // Added player name
+	RoomID entity.RoomID
+	Player userEntity.User
 }
 
 // JoinRoomHandler handles room joining
@@ -37,20 +36,14 @@ func (h *JoinRoomHandler) Handle(ctx context.Context, cmd JoinRoomCommand) error
 		return err
 	}
 
-	// Create user entity
-	user := &userEntity.User{
-		ID:       cmd.PlayerID,
-		Username: cmd.Name,
-	}
-
 	// Add user to room
-	if err := h.roomRepo.AddPlayerToRoom(cmd.RoomID, user); err != nil {
+	if err := h.roomRepo.AddPlayerToRoom(cmd.RoomID, &cmd.Player); err != nil {
 		return err
 	}
 
 	event := entity.PlayerJoinedEvent{
 		RoomID:   cmd.RoomID,
-		PlayerID: cmd.PlayerID,
+		PlayerID: cmd.Player.ID,
 		JoinedAt: time.Now(),
 	}
 

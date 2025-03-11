@@ -17,9 +17,8 @@ func (h *BotHandler) HandleJoinRoomCallback(c telebot.Context, roomID string) er
 
 	// Join room
 	cmd := roomCommand.JoinRoomCommand{
-		RoomID:   entity.RoomID(roomID),
-		PlayerID: user.ID,
-		Name:     user.Username,
+		RoomID: entity.RoomID(roomID),
+		Player: *user,
 	}
 	if err := h.joinRoomHandler.Handle(context.Background(), cmd); err != nil {
 		return c.Respond(&telebot.CallbackResponse{
@@ -27,31 +26,49 @@ func (h *BotHandler) HandleJoinRoomCallback(c telebot.Context, roomID string) er
 		})
 	}
 
-	// Fetch updated room list
-	rooms, err := h.getRoomsHandler.Handle(context.Background(), roomQuery.GetRoomsQuery{})
+	// Fetch players in the room
+	players, err := h.getPlayersInRoomHandler.Handle(context.Background(), roomQuery.GetPlayersInRoomQuery{RoomID: entity.RoomID(roomID)})
 	if err != nil {
 		return c.Respond(&telebot.CallbackResponse{
-			Text: "Failed to fetch updated rooms.",
+			Text: "Failed to fetch players in the room.",
 		})
 	}
 
-	// Create inline keyboard with updated player counts
-	var buttons [][]telebot.InlineButton
-	for _, room := range rooms {
-		buttonText := fmt.Sprintf("%s (بازیکنان: %d)", room.Name, len(room.Players))
-		button := telebot.InlineButton{
-			Unique: UniqueJoinSelectRoom,
-			Text:   buttonText,
-			Data:   string(room.ID),
-		}
-		buttons = append(buttons, []telebot.InlineButton{button})
+	// Fetch rooms
+	rooms, err := h.getRoomsHandler.Handle(context.Background(), roomQuery.GetRoomsQuery{})
+	if err != nil {
+		return c.Respond(&telebot.CallbackResponse{
+			Text: "Failed to fetch rooms.",
+		})
 	}
 
-	markup := &telebot.ReplyMarkup{InlineKeyboard: buttons}
+	// Construct the message with room name and player list
+	roomName := ""
+	for _, room := range rooms {
+		if room.ID == entity.RoomID(roomID) {
+			roomName = room.Name
+			break
+		}
+	}
+	playerNames := ""
+	for _, player := range players {
+		playerNames += fmt.Sprintf("- %s\n", player.FirstName)
+	}
+	messageText := fmt.Sprintf("You have joined the room [%s].\nPlayers in the room:\n%s", roomName, playerNames)
 
-	c.Respond(&telebot.CallbackResponse{
-		Text: "Successfully joined the room!",
-	})
-	// Edit the original message with updated room list
-	return c.Edit("Available rooms:", markup)
+	// Remove user from refresh list
+	messageIDsMutex.Lock()
+	delete(messageIDs, int64(user.ID))
+	messageIDsMutex.Unlock()
+
+	// Create a "Leave this room" button
+	leaveButton := telebot.InlineButton{
+		Unique: UniqueLeaveRoomSelectRoom,
+		Text:   "Leave this room",
+		Data:   string(roomID),
+	}
+	markup := &telebot.ReplyMarkup{InlineKeyboard: [][]telebot.InlineButton{{leaveButton}}}
+
+	// Edit the original message with the room and player list
+	return c.Edit(messageText, markup)
 }
