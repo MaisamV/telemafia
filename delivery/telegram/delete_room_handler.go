@@ -24,7 +24,7 @@ func (h *BotHandler) HandleDeleteRoom(c telebot.Context) error {
 	var buttons [][]telebot.InlineButton
 	for _, room := range rooms {
 		button := telebot.InlineButton{
-			Unique: UniqueDeleteRoom,
+			Unique: UniqueDeleteRoomSelectRoom,
 			Text:   room.Name,
 			Data:   string(room.ID),
 		}

@@ -55,7 +55,7 @@ func (h *BotHandler) HandleListRooms(c telebot.Context) error {
 			buttonText := fmt.Sprintf("%s (بازیکنان: %d)", room.Name, len(room.Players))
 			buttons = append(buttons, []telebot.InlineButton{
 				{
-					Unique: UniqueJoinToRoom,
+					Unique: UniqueJoinSelectRoom,
 					Text:   buttonText,
 					Data:   string(room.ID),
 				},

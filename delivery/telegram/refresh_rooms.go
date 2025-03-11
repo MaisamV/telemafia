@@ -16,7 +16,7 @@ func (h *BotHandler) RefreshRoomsList() {
 		fmt.Println("Refreshing room list")
 		rooms, err := h.getRoomsHandler.Handle(context.Background(), roomQuery.GetRoomsQuery{})
 		if err != nil {
-			fmt.Println("RefreshRoomsList: Error getting rooms.")
+			fmt.Printf("RefreshRoomsList: Error getting rooms: %v\n", err)
 			return
 		}
 
@@ -32,7 +32,7 @@ func (h *BotHandler) RefreshRoomsList() {
 
 		if len(rooms) == 0 {
 			for _, um := range userMessages {
-				fmt.Println(fmt.Sprintf("Refreshing message for user %d with message ID %d", um.userID, um.messageID))
+				fmt.Printf("Refreshing message for user %d with message ID %d\n", um.userID, um.messageID)
 				h.bot.Edit(&telebot.Message{ID: um.messageID, Chat: &telebot.Chat{ID: um.userID}}, "فعلا بازی در حال شروع شدن نیست.")
 			}
 			return
@@ -44,7 +44,7 @@ func (h *BotHandler) RefreshRoomsList() {
 			buttonText := fmt.Sprintf("%s (بازیکنان: %d)", room.Name, len(room.Players))
 			buttons = append(buttons, []telebot.InlineButton{
 				{
-					Unique: UniqueJoinToRoom,
+					Unique: UniqueJoinSelectRoom,
 					Text:   buttonText,
 					Data:   string(room.ID),
 				},
@@ -54,7 +54,7 @@ func (h *BotHandler) RefreshRoomsList() {
 		markup := &telebot.ReplyMarkup{InlineKeyboard: buttons}
 
 		for _, um := range userMessages {
-			fmt.Println(fmt.Sprintf("Refreshing message for user %d with message ID %d", um.userID, um.messageID))
+			fmt.Printf("Refreshing message for user %d with message ID %d\n", um.userID, um.messageID)
 			h.bot.Edit(&telebot.Message{ID: um.messageID, Chat: &telebot.Chat{ID: um.userID}}, "Available rooms:", markup)
 		}
 	}

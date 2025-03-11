@@ -40,7 +40,7 @@ func (h *BotHandler) HandleJoinRoomCallback(c telebot.Context, roomID string) er
 	for _, room := range rooms {
 		buttonText := fmt.Sprintf("%s (بازیکنان: %d)", room.Name, len(room.Players))
 		button := telebot.InlineButton{
-			Unique: UniqueJoinToRoom,
+			Unique: UniqueJoinSelectRoom,
 			Text:   buttonText,
 			Data:   string(room.ID),
 		}

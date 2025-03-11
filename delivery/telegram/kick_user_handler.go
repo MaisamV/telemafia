@@ -24,7 +24,7 @@ func (h *BotHandler) HandleKickUser(c telebot.Context) error {
 	var buttons [][]telebot.InlineButton
 	for _, room := range rooms {
 		button := telebot.InlineButton{
-			Unique: UniqueKickFromRoom,
+			Unique: UniqueKickSelectRoom,
 			Text:   room.Name,
 			Data:   string(room.ID),
 		}

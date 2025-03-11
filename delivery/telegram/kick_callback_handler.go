@@ -23,7 +23,7 @@ func (h *BotHandler) HandleKickUserCallback(c telebot.Context, data string) erro
 	var buttons [][]telebot.InlineButton
 	for _, player := range players {
 		button := telebot.InlineButton{
-			Unique: UniqueKickPlayerFromRoom,
+			Unique: UniqueKickFromRoomSelectPlayer,
 			Text:   player.FirstName + " " + player.LastName + " (" + player.Username + ")",
 			Data:   roomID + ":" + strconv.FormatInt(int64(player.ID), 10),
 		}

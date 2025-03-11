@@ -9,10 +9,10 @@ import (
 
 // Unique identifiers for inline buttons
 const (
-	UniqueJoinToRoom         = "join"
-	UniqueKickFromRoom       = "kick"
-	UniqueKickPlayerFromRoom = "kick_player"
-	UniqueDeleteRoom         = "delete_room"
+	UniqueJoinSelectRoom           = "join_selectRoom"
+	UniqueKickSelectRoom           = "kick_selectRoom"
+	UniqueKickFromRoomSelectPlayer = "kickFromRoom_selectPlayer"
+	UniqueDeleteRoomSelectRoom     = "deleteRoom_selectRoom"
 )
 
 func (h *BotHandler) HandleCallback(c telebot.Context) error {
@@ -27,13 +27,13 @@ func (h *BotHandler) HandleCallback(c telebot.Context) error {
 	data := parts[1]
 	fmt.Println(unique)
 	fmt.Println(data)
-	if unique == UniqueJoinToRoom {
+	if unique == UniqueJoinSelectRoom {
 		return h.HandleJoinRoomCallback(c, data)
-	} else if unique == UniqueKickFromRoom {
+	} else if unique == UniqueKickSelectRoom {
 		return h.HandleKickUserCallback(c, data)
-	} else if unique == UniqueKickPlayerFromRoom {
+	} else if unique == UniqueKickFromRoomSelectPlayer {
 		return h.HandleKickUserFromRoomCallback(c, data)
-	} else if unique == UniqueDeleteRoom {
+	} else if unique == UniqueDeleteRoomSelectRoom {
 		return h.HandleDeleteRoomCallback(c, data)
 	}
 	fmt.Println("button command not found")
