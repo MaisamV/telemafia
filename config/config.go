@@ -8,8 +8,8 @@ import (
 	"log"
 	"os"
 	"strings"
-	"telemafia/delivery/common"
 	"telemafia/delivery/telegram"
+	"telemafia/delivery/util"
 	roomMemory "telemafia/internal/infrastructure/room/memory"
 	roomCommand "telemafia/internal/room/usecase/command"
 	roomQuery "telemafia/internal/room/usecase/query"
@@ -59,7 +59,7 @@ func LoadConfig(filename string) (*Config, error) {
 		if err := decoder.Decode(cfg); err == nil && cfg.TelegramBotToken != "" {
 			fmt.Println("✅ Loaded configuration from", filename)
 			GlobalConfig = cfg
-			common.SetAdminUsers(cfg.AdminUsernames)
+			util.SetAdminUsers(cfg.AdminUsernames)
 			return GlobalConfig, nil
 		}
 	}
@@ -79,7 +79,7 @@ func (p *EventPublisher) Publish(event event.Event) error {
 
 // InitializeDependencies initializes and returns all necessary dependencies
 func InitializeDependencies(cfg *Config) (*telegram.BotHandler, error) {
-	common.SetAdminUsers(GetGlobalConfig().AdminUsernames)
+	util.SetAdminUsers(GetGlobalConfig().AdminUsernames)
 	// Initialize Telegram Bot
 	botSettings := telebot.Settings{
 		Token:  cfg.TelegramBotToken,

@@ -5,7 +5,7 @@ import (
 	"gopkg.in/telebot.v3"
 	"strings"
 	errorHandler "telemafia/common/error"
-	"telemafia/delivery/common"
+	"telemafia/delivery/util"
 	"telemafia/internal/room/entity"
 	roomCommand "telemafia/internal/room/usecase/command"
 )
@@ -17,7 +17,7 @@ func (h *BotHandler) HandleJoinRoom(c telebot.Context) error {
 		return c.Send("Please provide a room ID: /join_room [room_id]")
 	}
 
-	user := common.ToUser(c.Sender())
+	user := util.ToUser(c.Sender())
 	// Join room
 	cmd := roomCommand.JoinRoomCommand{
 		RoomID:   entity.RoomID(args),

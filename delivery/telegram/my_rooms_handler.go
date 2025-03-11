@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"telemafia/delivery/common"
+	"telemafia/delivery/util"
 	roomQuery "telemafia/internal/room/usecase/query"
 
 	"gopkg.in/telebot.v3"
@@ -12,7 +12,7 @@ import (
 
 // HandleMyRooms handles the /my_rooms command
 func (h *BotHandler) HandleMyRooms(c telebot.Context) error {
-	user := common.ToUser(c.Sender())
+	user := util.ToUser(c.Sender())
 
 	rooms, err := h.getPlayerRoomsHandler.Handle(context.Background(), roomQuery.GetPlayerRoomsQuery{
 		PlayerID: user.ID,

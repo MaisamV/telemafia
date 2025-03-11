@@ -3,7 +3,7 @@ package telegram
 import (
 	"context"
 	"fmt"
-	"telemafia/delivery/common"
+	"telemafia/delivery/util"
 	"telemafia/internal/room/entity"
 	roomCommand "telemafia/internal/room/usecase/command"
 	roomQuery "telemafia/internal/room/usecase/query"
@@ -13,7 +13,7 @@ import (
 
 // HandleJoinRoomCallback handles the join room callback
 func (h *BotHandler) HandleJoinRoomCallback(c telebot.Context, roomID string) error {
-	user := common.ToUser(c.Sender())
+	user := util.ToUser(c.Sender())
 
 	// Join room
 	cmd := roomCommand.JoinRoomCommand{

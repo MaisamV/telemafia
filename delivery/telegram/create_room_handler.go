@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 	errorHandler "telemafia/common/error"
-	"telemafia/delivery/common"
+	"telemafia/delivery/util"
 	"telemafia/internal/room/entity"
 	roomCommand "telemafia/internal/room/usecase/command"
 	"time"
@@ -20,7 +20,7 @@ func (h *BotHandler) HandleCreateRoom(c telebot.Context) error {
 		return c.Send("Please provide a room name: /create_room [name]")
 	}
 
-	user := common.ToUser(c.Sender())
+	user := util.ToUser(c.Sender())
 	if !user.CanCreateRoom() {
 		return c.Send("Only admins can create rooms")
 	}
