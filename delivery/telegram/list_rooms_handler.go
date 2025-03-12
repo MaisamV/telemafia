@@ -37,17 +37,32 @@ func (h *BotHandler) HandleListRooms(c telebot.Context) error {
 	delete(messageIDs, c.Sender().ID)
 	messageIDsMutex.RUnlock()
 	if exists {
-		c.Bot().Delete(&telebot.Message{ID: prevMsgID, Chat: &telebot.Chat{ID: c.Sender().ID}})
+		h.bot.Delete(&telebot.Message{ID: prevMsgID, Chat: &telebot.Chat{ID: c.Sender().ID}})
 	}
+	text, markup, err := h.ListRoomsMessage()
+	if err != nil {
+		c.Respond(&telebot.CallbackResponse{Text: fmt.Sprintf("Error listing rooms: %v", err)})
+		return err
+	}
+	msg, err := h.bot.Send(&telebot.Chat{ID: c.Sender().ID}, text, markup)
+	if err == nil {
+		messageIDsMutex.Lock()
+		messageIDs[c.Sender().ID] = msg.ID
+		messageIDsMutex.Unlock()
+	}
+	return err
+}
 
+func (h *BotHandler) ListRoomsMessage() (string, *telebot.ReplyMarkup, error) {
 	rooms, err := h.getRoomsHandler.Handle(context.Background(), roomQuery.GetRoomsQuery{})
 	if err != nil {
-		return c.Respond(&telebot.CallbackResponse{Text: fmt.Sprintf("Error getting rooms: %v", err)})
+		return "", nil, err
 	}
 
-	var msg *telebot.Message = nil
+	var text string
+	var markup *telebot.ReplyMarkup = nil
 	if len(rooms) == 0 {
-		msg, err = c.Bot().Send(&telebot.Chat{ID: c.Sender().ID}, "فعلا بازی در حال شروع شدن نیست.")
+		text = "فعلا بازی در حال شروع شدن نیست."
 	} else {
 		// Create inline keyboard
 		var buttons [][]telebot.InlineButton
@@ -61,17 +76,11 @@ func (h *BotHandler) HandleListRooms(c telebot.Context) error {
 				},
 			})
 		}
-
-		msg, err = c.Bot().Send(&telebot.Chat{ID: c.Sender().ID}, "Available rooms:", &telebot.ReplyMarkup{
+		text = "Available rooms:"
+		markup = &telebot.ReplyMarkup{
 			InlineKeyboard: buttons,
-		})
+		}
 	}
 
-	if err == nil {
-		messageIDsMutex.Lock()
-		messageIDs[c.Sender().ID] = msg.ID
-		messageIDsMutex.Unlock()
-	}
-
-	return err
+	return text, markup, err
 }
