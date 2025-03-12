@@ -91,7 +91,7 @@ func (r *InMemoryRepository) AddPlayerToRoom(roomID entity.RoomID, player *userE
 	// Check if player is already in the room
 	for _, p := range room.Players {
 		if p.ID == player.ID {
-			return error2.ErrPlayerAlreadyInRoom
+			return nil
 		}
 	}
 

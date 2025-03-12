@@ -24,6 +24,7 @@ func (e RoomCreatedEvent) OccurredAt() time.Time {
 type PlayerJoinedEvent struct {
 	RoomID   RoomID
 	PlayerID userEntity.UserID
+	RoomName string
 	JoinedAt time.Time
 }
 

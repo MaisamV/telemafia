@@ -3,13 +3,14 @@ package telegram
 import (
 	"context"
 	"fmt"
-	"gopkg.in/telebot.v3"
 	"strings"
 	errorHandler "telemafia/common/error"
 	"telemafia/delivery/util"
 	"telemafia/internal/room/entity"
 	roomCommand "telemafia/internal/room/usecase/command"
 	roomQuery "telemafia/internal/room/usecase/query"
+
+	"gopkg.in/telebot.v3"
 )
 
 // HandleJoinRoom handles the /join_room command

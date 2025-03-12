@@ -31,19 +31,21 @@ func NewJoinRoomHandler(repo repo.Repository, publisher event.Publisher) *JoinRo
 
 // Handle processes the join room command
 func (h *JoinRoomHandler) Handle(ctx context.Context, cmd JoinRoomCommand) error {
-	_, err := h.roomRepo.GetRoomByID(cmd.RoomID)
-	if err != nil {
+	// Add user to room
+	if err := h.roomRepo.AddPlayerToRoom(cmd.RoomID, &cmd.Player); err != nil {
 		return err
 	}
 
-	// Add user to room
-	if err := h.roomRepo.AddPlayerToRoom(cmd.RoomID, &cmd.Player); err != nil {
+	// Publish event with room details
+	room, err := h.roomRepo.GetRoomByID(cmd.RoomID)
+	if err != nil {
 		return err
 	}
 
 	event := entity.PlayerJoinedEvent{
 		RoomID:   cmd.RoomID,
 		PlayerID: cmd.Player.ID,
+		RoomName: room.Name, // Assuming RoomName is part of the event
 		JoinedAt: time.Now(),
 	}
 

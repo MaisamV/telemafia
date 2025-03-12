@@ -47,6 +47,10 @@ func (h *BotHandler) RefreshRoomsList() {
 				text, markup, err = h.ListRoomsMessage()
 			case RoomDetail:
 				text, markup, err = h.RoomDetailMessage(um.message.data)
+				if err != nil {
+					ChangeRefreshType(um.userID, ListRooms, um.message.data)
+					text, markup, err = h.ListRoomsMessage()
+				}
 			}
 			if err != nil {
 				fmt.Printf("Error refreshing message: %v", err)
