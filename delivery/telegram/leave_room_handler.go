@@ -2,6 +2,7 @@ package telegram
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	errorHandler "telemafia/common/error"
 	"telemafia/delivery/util"
@@ -45,12 +46,23 @@ func (h *BotHandler) HandleLeaveRoomCallback(c telebot.Context, roomID string) e
 	// Execute leave room command
 	if err := h.leaveRoomHandler.Handle(context.Background(), cmd); err != nil {
 		return c.Respond(&telebot.CallbackResponse{
-			Text: "Error leaving room",
+			Text: fmt.Sprintf("Error leaving room: %v", err),
 		})
 	}
 
+	// Change refresh message type
+	ChangeRefreshType(user.ID, ListRooms, roomID)
+
 	// Notify user
-	return c.Respond(&telebot.CallbackResponse{
+	c.Respond(&telebot.CallbackResponse{
 		Text: "You have left the room.",
 	})
+
+	message, markup, err := h.ListRoomsMessage()
+	if err != nil {
+		c.Respond(&telebot.CallbackResponse{
+			Text: fmt.Sprintf("Error leaving room: %v", err),
+		})
+	}
+	return h.UpdateMessage(c.Sender().ID, c.Message().ID, message, markup)
 }
