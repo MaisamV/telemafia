@@ -3,6 +3,8 @@ package telegram
 import (
 	"context"
 	"telemafia/common"
+	"telemafia/internal/room/entity"
+	roomCommand "telemafia/internal/room/usecase/command"
 	roomQuery "telemafia/internal/room/usecase/query"
 
 	"gopkg.in/telebot.v3"
@@ -33,4 +35,20 @@ func (h *BotHandler) HandleDeleteRoom(c telebot.Context) error {
 
 	markup := &telebot.ReplyMarkup{InlineKeyboard: buttons}
 	return c.Send("Select a room to delete:", markup)
+}
+
+// HandleDeleteRoomCallback handles the callback to delete a specific room
+func (h *BotHandler) HandleDeleteRoomCallback(c telebot.Context, roomID string) error {
+	cmd := roomCommand.DeleteRoomCommand{
+		RoomID: entity.RoomID(roomID),
+	}
+	if err := h.deleteRoomHandler.Handle(context.Background(), cmd); err != nil {
+		return c.Respond(&telebot.CallbackResponse{
+			Text: "Failed to delete room.",
+		})
+	}
+
+	return c.Respond(&telebot.CallbackResponse{
+		Text: "Room successfully deleted!",
+	})
 }
