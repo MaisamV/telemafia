@@ -2,8 +2,13 @@ package telegram
 
 import (
 	"context"
+	"strconv"
+	"strings"
 	"telemafia/common"
+	"telemafia/internal/room/entity"
+	roomCommand "telemafia/internal/room/usecase/command"
 	roomQuery "telemafia/internal/room/usecase/query"
+	userEntity "telemafia/internal/user/entity"
 
 	"gopkg.in/telebot.v3"
 )
@@ -33,4 +38,63 @@ func (h *BotHandler) HandleKickUser(c telebot.Context) error {
 
 	markup := &telebot.ReplyMarkup{InlineKeyboard: buttons}
 	return c.Send("Select a room:", markup)
+}
+
+// HandleKickUserFromRoomCallback handles the callback to kick a specific user from a room
+func (h *BotHandler) HandleKickUserFromRoomCallback(c telebot.Context, data string) error {
+	// Extract room ID and player ID from callback data
+	parts := strings.Split(data, ":")
+	if len(parts) != 2 {
+		return c.Respond(&telebot.CallbackResponse{
+			Text: "Invalid data format.",
+		})
+	}
+	roomID := parts[0]
+	playerID := parts[1]
+
+	id, err := common.StringToInt64(playerID)
+	if err != nil {
+		return c.Respond(&telebot.CallbackResponse{
+			Text: "Failed to extract user ID.",
+		})
+	}
+	// Kick user from room
+	cmd := roomCommand.KickUserCommand{
+		RoomID:   entity.RoomID(roomID),
+		PlayerID: userEntity.UserID(id),
+	}
+	if err := h.kickUserHandler.Handle(context.Background(), cmd); err != nil {
+		return c.Respond(&telebot.CallbackResponse{
+			Text: "Failed to kick user.",
+		})
+	}
+
+	return c.Respond(&telebot.CallbackResponse{
+		Text: "User successfully kicked from the room!",
+	})
+}
+
+// HandleKickUserCallback handles the kick user callback
+func (h *BotHandler) HandleKickUserCallback(c telebot.Context, data string) error {
+	roomID := data
+	// Fetch players in the room and send them as inline keyboard buttons
+	players, err := h.getPlayersInRoomHandler.Handle(context.Background(), roomQuery.GetPlayersInRoomQuery{RoomID: entity.RoomID(roomID)})
+	if err != nil {
+		return c.Respond(&telebot.CallbackResponse{
+			Text: "Failed to fetch players.",
+		})
+	}
+
+	var buttons [][]telebot.InlineButton
+	for _, player := range players {
+		button := telebot.InlineButton{
+			Unique: UniqueKickFromRoomSelectPlayer,
+			Text:   player.FirstName + " " + player.LastName + " (" + player.Username + ")",
+			Data:   roomID + ":" + strconv.FormatInt(int64(player.ID), 10),
+		}
+		buttons = append(buttons, []telebot.InlineButton{button})
+	}
+
+	markup := &telebot.ReplyMarkup{InlineKeyboard: buttons}
+	return c.Send("Select a player to kick:", markup)
 }
