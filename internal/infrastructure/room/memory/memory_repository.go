@@ -14,12 +14,14 @@ type InMemoryRepository struct {
 
 	changeFlag      bool
 	changeFlagMutex sync.Mutex
+	roomToScenario  map[entity.RoomID]string
 }
 
 // NewInMemoryRepository creates a new in-memory repository
 func NewInMemoryRepository() repo.Repository {
 	return &InMemoryRepository{
-		rooms: make(map[entity.RoomID]*entity.Room),
+		rooms:          make(map[entity.RoomID]*entity.Room),
+		roomToScenario: make(map[entity.RoomID]string),
 	}
 }
 
@@ -171,4 +173,35 @@ func (r *InMemoryRepository) ConsumeChangeFlag() bool {
 	changed := r.changeFlag
 	r.changeFlag = false
 	return changed
+}
+
+// RaiseChangeFlag sets the change flag to true
+func (r *InMemoryRepository) RaiseChangeFlag() {
+	r.changeFlagMutex.Lock()
+	r.changeFlag = true
+	r.changeFlagMutex.Unlock()
+}
+
+// AssignScenarioToRoom assigns a scenario to a room
+func (r *InMemoryRepository) AssignScenarioToRoom(roomID entity.RoomID, scenarioName string) error {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	if _, exists := r.rooms[roomID]; !exists {
+		return error2.ErrRoomNotFound
+	}
+	r.roomToScenario[roomID] = scenarioName
+	r.RaiseChangeFlag()
+	return nil
+}
+
+// GetRoomScenario gets the scenario assigned to a room
+func (r *InMemoryRepository) GetRoomScenario(roomID entity.RoomID) (string, error) {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
+	if _, exists := r.rooms[roomID]; !exists {
+		return "", error2.ErrRoomNotFound
+	}
+	return r.roomToScenario[roomID], nil
 }

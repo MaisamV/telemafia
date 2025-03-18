@@ -10,11 +10,19 @@ import (
 	"strings"
 	"telemafia/delivery/telegram"
 	"telemafia/delivery/util"
+	gameMemory "telemafia/internal/infrastructure/game/memory"
 	roomMemory "telemafia/internal/infrastructure/room/memory"
 	roomCommand "telemafia/internal/room/usecase/command"
 	roomQuery "telemafia/internal/room/usecase/query"
 	"telemafia/pkg/event"
 	"time"
+
+	scenarioMemory "telemafia/internal/infrastructure/scenario/memory"
+	scenarioCommand "telemafia/internal/scenario/usecase/command"
+	scenarioQuery "telemafia/internal/scenario/usecase/query"
+
+	gameCommand "telemafia/internal/game/usecase/command"
+	gameQuery "telemafia/internal/game/usecase/query"
 
 	"gopkg.in/telebot.v3"
 )
@@ -94,6 +102,12 @@ func InitializeDependencies(cfg *Config) (*telegram.BotHandler, error) {
 	// Initialize repositories from infrastructure layer
 	roomRepo := roomMemory.NewInMemoryRepository()
 
+	// Initialize scenario repository
+	scenarioRepo := scenarioMemory.NewInMemoryRepository()
+
+	// Initialize game repository
+	gameRepo := gameMemory.NewInMemoryGameRepository()
+
 	// Initialize event publishers
 	eventPublisher := &EventPublisher{}
 
@@ -104,12 +118,33 @@ func InitializeDependencies(cfg *Config) (*telegram.BotHandler, error) {
 	kickUserHandler := roomCommand.NewKickUserHandler(roomRepo, eventPublisher)
 	deleteRoomHandler := roomCommand.NewDeleteRoomHandler(roomRepo)
 	resetChangeFlagHandler := roomCommand.NewResetChangeFlagCommand(roomRepo)
+	raiseChangeFlagHandler := roomCommand.NewRaiseChangeFlagHandler(roomRepo)
+	getRoomHandler := roomQuery.NewGetRoomHandler(roomRepo)
+
+	// Initialize scenario command handlers
+	createScenarioHandler := scenarioCommand.NewCreateScenarioHandler(scenarioRepo)
+	deleteScenarioHandler := scenarioCommand.NewDeleteScenarioHandler(scenarioRepo)
+	manageRolesHandler := scenarioCommand.NewManageRolesHandler(scenarioRepo)
+
+	// Initialize scenario query handlers
+	getScenarioByIDHandler := scenarioQuery.NewGetScenarioByIDHandler(scenarioRepo)
+	getAllScenariosHandler := scenarioQuery.NewGetAllScenariosHandler(scenarioRepo)
 
 	// Initialize query handlers
 	getRoomsHandler := roomQuery.NewGetRoomsHandler(roomRepo)
 	getPlayerRoomsHandler := roomQuery.NewGetPlayerRoomsHandler(roomRepo)
 	getPlayersInRoomsHandler := roomQuery.NewGetPlayersInRoomHandler(roomRepo)
 	checkChangeFlagHandler := roomQuery.NewCheckChangeFlagHandler(roomRepo)
+
+	// Initialize game handlers
+	createGameHandler := gameCommand.NewCreateGameHandler(gameRepo)
+	assignRolesHandler := gameCommand.NewAssignRolesHandler(gameRepo, scenarioRepo)
+	getGamesHandler := gameQuery.NewGetGamesHandler(gameRepo)
+	getGameByIDHandler := gameQuery.NewGetGameByIDHandler(gameRepo)
+
+	// Initialize room command handlers that use game functionality
+	assignScenarioHandler := roomCommand.NewAssignScenarioHandler(roomRepo)
+
 	// Initialize bot handler
 	botHandler := telegram.NewBotHandler(
 		telegramBot,
@@ -120,10 +155,22 @@ func InitializeDependencies(cfg *Config) (*telegram.BotHandler, error) {
 		kickUserHandler,
 		deleteRoomHandler,
 		resetChangeFlagHandler,
+		raiseChangeFlagHandler,
 		getRoomsHandler,
 		getPlayerRoomsHandler,
 		getPlayersInRoomsHandler,
+		getRoomHandler,
 		checkChangeFlagHandler,
+		createScenarioHandler,
+		deleteScenarioHandler,
+		manageRolesHandler,
+		getScenarioByIDHandler,
+		getAllScenariosHandler,
+		assignRolesHandler,
+		assignScenarioHandler,
+		createGameHandler,
+		getGamesHandler,
+		getGameByIDHandler,
 	)
 
 	return botHandler, nil

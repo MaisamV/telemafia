@@ -7,9 +7,10 @@ import (
 
 // RoomCreatedEvent is emitted when a new room is created
 type RoomCreatedEvent struct {
-	RoomID    RoomID
-	Name      string
-	CreatedAt time.Time
+	RoomID       RoomID
+	Name         string
+	CreatedAt    time.Time
+	ScenarioName string
 }
 
 func (e RoomCreatedEvent) EventName() string {
@@ -64,4 +65,34 @@ func (e PlayerKickedEvent) EventName() string {
 
 func (e PlayerKickedEvent) OccurredAt() time.Time {
 	return e.KickedAt
+}
+
+// RoomDetailMessage represents the details of a room
+type RoomDetailMessage struct {
+	RoomID       RoomID
+	Name         string
+	CreatedAt    time.Time
+	PlayerCount  int
+	ScenarioName string
+	Players      []*userEntity.User
+}
+
+func (m RoomDetailMessage) EventName() string {
+	return "room.detail"
+}
+
+func (m RoomDetailMessage) OccurredAt() time.Time {
+	return m.CreatedAt
+}
+
+// NewRoomDetailMessage creates a new RoomDetailMessage from a Room
+func NewRoomDetailMessage(room *Room) RoomDetailMessage {
+	return RoomDetailMessage{
+		RoomID:       room.ID,
+		Name:         room.Name,
+		CreatedAt:    room.CreatedAt,
+		PlayerCount:  len(room.Players),
+		ScenarioName: room.ScenarioName,
+		Players:      room.Players,
+	}
 }

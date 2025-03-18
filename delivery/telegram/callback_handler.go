@@ -1,7 +1,7 @@
 package telegram
 
 import (
-	"fmt"
+	"log"
 	"strings"
 
 	"gopkg.in/telebot.v3"
@@ -14,31 +14,45 @@ const (
 	UniqueKickFromRoomSelectPlayer = "kickFromRoom_selectPlayer"
 	UniqueDeleteRoomSelectRoom     = "deleteRoom_selectRoom"
 	UniqueLeaveRoomSelectRoom      = "leaveRoom_selectRoom"
+	UniqueConfirm                  = "confirm_assignments"
 )
 
+// HandleCallback handles all callbacks from inline buttons
 func (h *BotHandler) HandleCallback(c telebot.Context) error {
 	// Extract room ID and player ID from callback data
-	parts := strings.Split(c.Callback().Data, "|")
+	data := c.Callback().Data
+
+	log.Printf("Received callback: %s", data)
+
+	// Process other callbacks with the original format
+	parts := strings.Split(data, "|")
 	if len(parts) != 2 {
+		log.Printf("Invalid callback data format: %s", data)
 		return c.Respond(&telebot.CallbackResponse{
 			Text: "Invalid data format.",
 		})
 	}
-	unique := strings.TrimSpace(parts[0])
-	data := parts[1]
-	fmt.Println(unique)
-	fmt.Println(data)
-	if unique == UniqueJoinSelectRoom {
-		return h.HandleJoinRoomCallback(c, data)
-	} else if unique == UniqueKickSelectRoom {
-		return h.HandleKickUserCallback(c, data)
-	} else if unique == UniqueKickFromRoomSelectPlayer {
-		return h.HandleKickUserFromRoomCallback(c, data)
-	} else if unique == UniqueDeleteRoomSelectRoom {
-		return h.HandleDeleteRoomCallback(c, data)
-	} else if unique == UniqueLeaveRoomSelectRoom {
-		return h.HandleLeaveRoomCallback(c, data)
+
+	uniqueFromData := strings.TrimSpace(parts[0])
+	callbackData := parts[1]
+
+	log.Printf("Parsed callback: unique=%s, data=%s", uniqueFromData, callbackData)
+
+	if uniqueFromData == UniqueConfirm {
+		log.Printf("Routing to HandleConfirmAssignments with data: %s", data)
+		return h.HandleConfirmAssignments(c, callbackData)
+	} else if uniqueFromData == UniqueJoinSelectRoom {
+		return h.HandleJoinRoomCallback(c, callbackData)
+	} else if uniqueFromData == UniqueKickSelectRoom {
+		return h.HandleKickUserCallback(c, callbackData)
+	} else if uniqueFromData == UniqueKickFromRoomSelectPlayer {
+		return h.HandleKickUserFromRoomCallback(c, callbackData)
+	} else if uniqueFromData == UniqueDeleteRoomSelectRoom {
+		return h.HandleDeleteRoomCallback(c, callbackData)
+	} else if uniqueFromData == UniqueLeaveRoomSelectRoom {
+		return h.HandleLeaveRoomCallback(c, callbackData)
 	}
-	fmt.Println("button command not found")
-	return c.Respond()
+
+	log.Printf("Button command not found: %s", uniqueFromData)
+	return c.Respond(&telebot.CallbackResponse{Text: "Unknown callback!"})
 }

@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"fmt"
 	"telemafia/internal/room/entity"
 	userEntity "telemafia/internal/user/entity"
 )
@@ -21,6 +22,9 @@ type RoomReader interface {
 
 	// CheckChangeFlag checks the current state of the change flag
 	CheckChangeFlag() bool
+
+	// GetRoomScenario gets the scenario assigned to a room
+	GetRoomScenario(roomID entity.RoomID) (string, error)
 }
 
 // RoomWriter defines the interface for writing room data
@@ -39,10 +43,55 @@ type RoomWriter interface {
 
 	// ConsumeChangeFlag checks and resets the change flag
 	ConsumeChangeFlag() bool
+
+	// RaiseChangeFlag sets the change flag to true
+	RaiseChangeFlag()
+
+	// AssignScenarioToRoom assigns a scenario to a room
+	AssignScenarioToRoom(roomID entity.RoomID, scenarioName string) error
 }
 
 // Repository defines the interface for room persistence
 type Repository interface {
 	RoomReader
 	RoomWriter
+}
+
+// InMemoryRepository provides an in-memory implementation of Repository
+type InMemoryRepository struct {
+	rooms          map[entity.RoomID]*entity.Room
+	changeFlag     bool
+	roomToScenario map[entity.RoomID]string
+}
+
+// NewInMemoryRepository creates a new in-memory repository
+func NewInMemoryRepository() *InMemoryRepository {
+	return &InMemoryRepository{
+		rooms:          make(map[entity.RoomID]*entity.Room),
+		changeFlag:     false,
+		roomToScenario: make(map[entity.RoomID]string),
+	}
+}
+
+// AssignScenarioToRoom assigns a scenario to a room
+func (r *InMemoryRepository) AssignScenarioToRoom(roomID entity.RoomID, scenarioName string) error {
+	if _, exists := r.rooms[roomID]; !exists {
+		return fmt.Errorf("room not found")
+	}
+	r.roomToScenario[roomID] = scenarioName
+	r.RaiseChangeFlag()
+	return nil
+}
+
+// GetRoomScenario gets the scenario assigned to a room
+func (r *InMemoryRepository) GetRoomScenario(roomID entity.RoomID) (string, error) {
+	if _, exists := r.rooms[roomID]; !exists {
+		return "", fmt.Errorf("room not found")
+	}
+	return r.roomToScenario[roomID], nil
+}
+
+// RaiseChangeFlag sets the change flag to true
+func (r *InMemoryRepository) RaiseChangeFlag() {
+	r.changeFlag = true
 }

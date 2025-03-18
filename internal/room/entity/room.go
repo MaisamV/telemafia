@@ -11,10 +11,11 @@ type RoomID string
 
 // Room represents a game room entity
 type Room struct {
-	ID        RoomID
-	Name      string
-	CreatedAt time.Time
-	Players   []*userEntity.User
+	ID           RoomID
+	Name         string
+	CreatedAt    time.Time
+	Players      []*userEntity.User
+	ScenarioName string
 }
 
 // NewRoom creates a new Room instance with validation
@@ -24,10 +25,11 @@ func NewRoom(id RoomID, name string) (*Room, error) {
 	}
 
 	return &Room{
-		ID:        id,
-		Name:      name,
-		CreatedAt: time.Now(),
-		Players:   make([]*userEntity.User, 0),
+		ID:           id,
+		Name:         name,
+		CreatedAt:    time.Now(),
+		Players:      make([]*userEntity.User, 0),
+		ScenarioName: "", // Initialize with empty scenario name
 	}, nil
 }
 
@@ -44,4 +46,9 @@ func (r *Room) RemovePlayer(playerID userEntity.UserID) {
 			return
 		}
 	}
+}
+
+// AssignScenario assigns a scenario to the room
+func (r *Room) AssignScenario(scenarioName string) {
+	r.ScenarioName = scenarioName
 }

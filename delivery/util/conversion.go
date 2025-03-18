@@ -22,3 +22,13 @@ func ToUser(sender *telebot.User) *userEntity.User {
 		Admin:     common.Contains(adminUsernames, sender.Username),
 	}
 }
+
+// IsAdmin checks if a username is in the list of admin usernames
+func IsAdmin(username string) bool {
+	for _, admin := range adminUsernames {
+		if admin == username {
+			return true
+		}
+	}
+	return false
+}

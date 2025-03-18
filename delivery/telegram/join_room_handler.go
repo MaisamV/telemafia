@@ -90,18 +90,34 @@ func (h *BotHandler) RoomDetailMessage(roomID string) (string, *telebot.ReplyMar
 	}
 
 	// Construct the message with room name and player list
-	roomName := ""
-	for _, room := range rooms {
-		if room.ID == entity.RoomID(roomID) {
-			roomName = room.Name
+	var room *entity.Room
+	for _, r := range rooms {
+		if r.ID == entity.RoomID(roomID) {
+			room = r
 			break
 		}
 	}
+	if room == nil {
+		return "", nil, fmt.Errorf("room not found")
+	}
+
 	playerNames := ""
 	for _, player := range players {
 		playerNames += fmt.Sprintf("- %s\n", player.FirstName)
 	}
-	messageText := fmt.Sprintf("You have joined the room [%s].\nPlayers in the room:\n%s", roomName, playerNames)
+
+	// Format message with scenario information if available
+	var messageText string
+	if room.ScenarioName != "" {
+		messageText = fmt.Sprintf("Room: %s\nScenario: %s\nPlayers in the room:\n%s",
+			room.Name,
+			room.ScenarioName,
+			playerNames)
+	} else {
+		messageText = fmt.Sprintf("Room: %s\nPlayers in the room:\n%s",
+			room.Name,
+			playerNames)
+	}
 
 	// Create a "Leave this room" button
 	leaveButton := telebot.InlineButton{

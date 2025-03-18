@@ -41,7 +41,11 @@ func (h *BotHandler) ListRoomsMessage() (string, *telebot.ReplyMarkup, error) {
 		// Create inline keyboard
 		var buttons [][]telebot.InlineButton
 		for _, room := range rooms {
-			buttonText := fmt.Sprintf("%s (بازیکنان: %d)", room.Name, len(room.Players))
+			scenarioInfo := ""
+			if room.ScenarioName != "" {
+				scenarioInfo = fmt.Sprintf(" - %s", room.ScenarioName)
+			}
+			buttonText := fmt.Sprintf("%s (بازیکنان: %d)%s", room.Name, len(room.Players), scenarioInfo)
 			buttons = append(buttons, []telebot.InlineButton{
 				{
 					Unique: UniqueJoinSelectRoom,
