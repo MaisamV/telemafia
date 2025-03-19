@@ -11,8 +11,8 @@ import (
 
 // LeaveRoomCommand represents the command to leave a room
 type LeaveRoomCommand struct {
-	RoomID   entity.RoomID
-	PlayerID userEntity.UserID
+	Requester userEntity.User
+	RoomID    entity.RoomID
 }
 
 // LeaveRoomHandler handles room leaving
@@ -37,14 +37,14 @@ func (h *LeaveRoomHandler) Handle(ctx context.Context, cmd LeaveRoomCommand) err
 	}
 
 	// Remove player from room
-	if err := h.roomRepo.RemovePlayerFromRoom(cmd.RoomID, cmd.PlayerID); err != nil {
+	if err := h.roomRepo.RemovePlayerFromRoom(cmd.RoomID, cmd.Requester.ID); err != nil {
 		return err
 	}
 
 	// Publish domain event
 	event := entity.PlayerLeftEvent{
 		RoomID:   cmd.RoomID,
-		PlayerID: cmd.PlayerID,
+		PlayerID: cmd.Requester.ID,
 		LeftAt:   time.Now(),
 	}
 

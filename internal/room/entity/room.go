@@ -15,6 +15,7 @@ type Room struct {
 	Name         string
 	CreatedAt    time.Time
 	Players      []*userEntity.User
+	Description  map[string]string
 	ScenarioName string
 }
 
@@ -29,6 +30,7 @@ func NewRoom(id RoomID, name string) (*Room, error) {
 		Name:         name,
 		CreatedAt:    time.Now(),
 		Players:      make([]*userEntity.User, 0),
+		Description:  make(map[string]string),
 		ScenarioName: "", // Initialize with empty scenario name
 	}, nil
 }
@@ -48,7 +50,6 @@ func (r *Room) RemovePlayer(playerID userEntity.UserID) {
 	}
 }
 
-// AssignScenario assigns a scenario to the room
-func (r *Room) AssignScenario(scenarioName string) {
-	r.ScenarioName = scenarioName
+func (r *Room) SetDescription(descriptionName string, text string) {
+	r.Description[descriptionName] = text
 }

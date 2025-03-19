@@ -22,9 +22,6 @@ type RoomReader interface {
 
 	// CheckChangeFlag checks the current state of the change flag
 	CheckChangeFlag() bool
-
-	// GetRoomScenario gets the scenario assigned to a room
-	GetRoomScenario(roomID entity.RoomID) (string, error)
 }
 
 // RoomWriter defines the interface for writing room data
@@ -46,9 +43,6 @@ type RoomWriter interface {
 
 	// RaiseChangeFlag sets the change flag to true
 	RaiseChangeFlag()
-
-	// AssignScenarioToRoom assigns a scenario to a room
-	AssignScenarioToRoom(roomID entity.RoomID, scenarioName string) error
 }
 
 // Repository defines the interface for room persistence

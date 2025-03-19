@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"errors"
 	"telemafia/internal/room/entity"
 	"telemafia/internal/room/repo"
 	userEntity "telemafia/internal/user/entity"
@@ -11,8 +12,9 @@ import (
 
 // KickUserCommand represents the command to kick a user from a room
 type KickUserCommand struct {
-	RoomID   entity.RoomID
-	PlayerID userEntity.UserID
+	Requester userEntity.User
+	RoomID    entity.RoomID
+	PlayerID  userEntity.UserID
 }
 
 // KickUserHandler handles kicking a user from a room
@@ -31,6 +33,9 @@ func NewKickUserHandler(repo repo.Repository, publisher event.Publisher) *KickUs
 
 // Handle processes the kick user command
 func (h *KickUserHandler) Handle(ctx context.Context, cmd KickUserCommand) error {
+	if !cmd.Requester.Admin {
+		return errors.New("admin privilege required")
+	}
 	// Get the room first to ensure it exists
 	if _, err := h.roomRepo.GetRoomByID(cmd.RoomID); err != nil {
 		return err

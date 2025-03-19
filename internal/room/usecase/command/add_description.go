@@ -8,8 +8,9 @@ import (
 
 // AssignScenarioCommand represents a command to assign a scenario to a room
 type AssignScenarioCommand struct {
-	RoomID       entity.RoomID
-	ScenarioName string
+	RoomID          entity.RoomID
+	DescriptionName string
+	Text            string
 }
 
 // AssignScenarioHandler handles the assign scenario command
@@ -32,13 +33,7 @@ func (h *AssignScenarioHandler) Handle(ctx context.Context, cmd AssignScenarioCo
 		return err
 	}
 
-	// Assign the scenario to the room
-	err = h.roomRepo.AssignScenarioToRoom(cmd.RoomID, cmd.ScenarioName)
-	if err != nil {
-		return err
-	}
-
 	// Update the room entity
-	room.AssignScenario(cmd.ScenarioName)
+	room.SetDescription(cmd.DescriptionName, cmd.Text)
 	return nil
 }

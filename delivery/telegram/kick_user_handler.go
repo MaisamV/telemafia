@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 	"telemafia/common"
+	"telemafia/delivery/util"
 	"telemafia/internal/room/entity"
 	roomCommand "telemafia/internal/room/usecase/command"
 	roomQuery "telemafia/internal/room/usecase/query"
@@ -60,8 +61,9 @@ func (h *BotHandler) HandleKickUserFromRoomCallback(c telebot.Context, data stri
 	}
 	// Kick user from room
 	cmd := roomCommand.KickUserCommand{
-		RoomID:   entity.RoomID(roomID),
-		PlayerID: userEntity.UserID(id),
+		Requester: *util.ToUser(c.Sender()),
+		RoomID:    entity.RoomID(roomID),
+		PlayerID:  userEntity.UserID(id),
 	}
 	if err := h.kickUserHandler.Handle(context.Background(), cmd); err != nil {
 		return c.Respond(&telebot.CallbackResponse{

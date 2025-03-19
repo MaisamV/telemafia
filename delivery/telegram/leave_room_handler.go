@@ -3,14 +3,12 @@ package telegram
 import (
 	"context"
 	"fmt"
+	"gopkg.in/telebot.v3"
 	"strings"
 	errorHandler "telemafia/common/error"
 	"telemafia/delivery/util"
 	"telemafia/internal/room/entity"
 	roomCommand "telemafia/internal/room/usecase/command"
-	userEntity "telemafia/internal/user/entity"
-
-	"gopkg.in/telebot.v3"
 )
 
 // HandleLeaveRoom handles the /leave_room command
@@ -23,8 +21,8 @@ func (h *BotHandler) HandleLeaveRoom(c telebot.Context) error {
 	user := util.ToUser(c.Sender())
 	// Leave room
 	cmd := roomCommand.LeaveRoomCommand{
-		RoomID:   entity.RoomID(args),
-		PlayerID: user.ID,
+		RoomID:    entity.RoomID(args),
+		Requester: *user,
 	}
 	if err := h.leaveRoomHandler.Handle(context.Background(), cmd); err != nil {
 		return c.Send(errorHandler.HandleError(err, "Error leaving room"))
@@ -39,8 +37,8 @@ func (h *BotHandler) HandleLeaveRoomCallback(c telebot.Context, roomID string) e
 
 	// Create leave room command
 	cmd := roomCommand.LeaveRoomCommand{
-		RoomID:   entity.RoomID(roomID),
-		PlayerID: userEntity.UserID(user.ID),
+		RoomID:    entity.RoomID(roomID),
+		Requester: *util.ToUser(user),
 	}
 
 	// Execute leave room command

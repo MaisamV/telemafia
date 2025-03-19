@@ -12,16 +12,13 @@ type InMemoryRepository struct {
 	rooms map[entity.RoomID]*entity.Room
 	mutex sync.RWMutex
 
-	changeFlag      bool
-	changeFlagMutex sync.Mutex
-	roomToScenario  map[entity.RoomID]string
+	changeFlag bool
 }
 
 // NewInMemoryRepository creates a new in-memory repository
 func NewInMemoryRepository() repo.Repository {
 	return &InMemoryRepository{
-		rooms:          make(map[entity.RoomID]*entity.Room),
-		roomToScenario: make(map[entity.RoomID]string),
+		rooms: make(map[entity.RoomID]*entity.Room),
 	}
 }
 
@@ -34,9 +31,7 @@ func (r *InMemoryRepository) CreateRoom(room *entity.Room) error {
 	}
 
 	r.rooms[room.ID] = room
-	r.changeFlagMutex.Lock()
 	r.changeFlag = true
-	r.changeFlagMutex.Unlock()
 	return nil
 }
 
@@ -98,9 +93,7 @@ func (r *InMemoryRepository) AddPlayerToRoom(roomID entity.RoomID, player *userE
 	}
 
 	room.Players = append(room.Players, player)
-	r.changeFlagMutex.Lock()
 	r.changeFlag = true
-	r.changeFlagMutex.Unlock()
 	return nil
 }
 
@@ -118,9 +111,7 @@ func (r *InMemoryRepository) RemovePlayerFromRoom(roomID entity.RoomID, playerID
 			// Remove player by swapping with last element and truncating
 			room.Players[i] = room.Players[len(room.Players)-1]
 			room.Players = room.Players[:len(room.Players)-1]
-			r.changeFlagMutex.Lock()
 			r.changeFlag = true
-			r.changeFlagMutex.Unlock()
 			return nil
 		}
 	}
@@ -151,24 +142,22 @@ func (r *InMemoryRepository) DeleteRoom(roomID entity.RoomID) error {
 	}
 
 	delete(r.rooms, roomID)
-	r.changeFlagMutex.Lock()
 	r.changeFlag = true
-	r.changeFlagMutex.Unlock()
 	return nil
 }
 
 // CheckChangeFlag checks the current state of the change flag
 func (r *InMemoryRepository) CheckChangeFlag() bool {
-	r.changeFlagMutex.Lock()
-	defer r.changeFlagMutex.Unlock()
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
 
 	return r.changeFlag
 }
 
 // ConsumeChangeFlag checks and resets the change flag
 func (r *InMemoryRepository) ConsumeChangeFlag() bool {
-	r.changeFlagMutex.Lock()
-	defer r.changeFlagMutex.Unlock()
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
 	changed := r.changeFlag
 	r.changeFlag = false
@@ -177,31 +166,7 @@ func (r *InMemoryRepository) ConsumeChangeFlag() bool {
 
 // RaiseChangeFlag sets the change flag to true
 func (r *InMemoryRepository) RaiseChangeFlag() {
-	r.changeFlagMutex.Lock()
-	r.changeFlag = true
-	r.changeFlagMutex.Unlock()
-}
-
-// AssignScenarioToRoom assigns a scenario to a room
-func (r *InMemoryRepository) AssignScenarioToRoom(roomID entity.RoomID, scenarioName string) error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
-
-	if _, exists := r.rooms[roomID]; !exists {
-		return error2.ErrRoomNotFound
-	}
-	r.roomToScenario[roomID] = scenarioName
-	r.RaiseChangeFlag()
-	return nil
-}
-
-// GetRoomScenario gets the scenario assigned to a room
-func (r *InMemoryRepository) GetRoomScenario(roomID entity.RoomID) (string, error) {
-	r.mutex.RLock()
-	defer r.mutex.RUnlock()
-
-	if _, exists := r.rooms[roomID]; !exists {
-		return "", error2.ErrRoomNotFound
-	}
-	return r.roomToScenario[roomID], nil
+	r.changeFlag = true
 }

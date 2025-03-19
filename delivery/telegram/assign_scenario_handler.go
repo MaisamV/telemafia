@@ -36,8 +36,9 @@ func (h *BotHandler) HandleAssignScenario(c telebot.Context) error {
 
 	// Assign the scenario to the room
 	cmd := roomCommand.AssignScenarioCommand{
-		RoomID:       entity.RoomID(roomID),
-		ScenarioName: scenario.Name,
+		RoomID:          entity.RoomID(roomID),
+		DescriptionName: "Scenario",
+		Text:            scenario.Name,
 	}
 	err = h.assignScenarioHandler.Handle(context.Background(), cmd)
 	if err != nil {
