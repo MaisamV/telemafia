@@ -87,15 +87,6 @@ func (r *InMemoryGameRepository) CreateGame(game *entity.Game) error {
 
 	log.Printf("Creating game '%s' for room '%s'", game.ID, game.Room.ID)
 
-	if _, exists := r.games[game.ID]; exists {
-		return errors.New("game already exists")
-	}
-
-	// Check if a game already exists for this room
-	if existingGameID, exists := r.roomToGame[game.Room.ID]; exists {
-		return fmt.Errorf("a game already exists for room '%s' (game ID: '%s')", game.Room.ID, existingGameID)
-	}
-
 	r.games[game.ID] = game
 	r.roomToGame[game.Room.ID] = game.ID
 
