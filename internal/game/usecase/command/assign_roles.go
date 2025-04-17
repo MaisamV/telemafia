@@ -5,13 +5,16 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"sort"
 	"strconv"
+	"telemafia/common"
 	"telemafia/internal/game/entity"
 	"telemafia/internal/game/repo"
 	roomEntity "telemafia/internal/room/entity"
 	scenarioEntity "telemafia/internal/scenario/entity"
 	scenarioRepo "telemafia/internal/scenario/repo"
 	userEntity "telemafia/internal/user/entity"
+	"time"
 )
 
 // AssignRolesCommand represents a command to assign roles to players
@@ -36,7 +39,7 @@ func NewAssignRolesHandler(gameRepo repo.GameRepository, scenarioRepo scenarioRe
 }
 
 // Handle processes the assign roles command
-func (h *AssignRolesHandler) Handle(cmd AssignRolesCommand) (map[string]scenarioEntity.Role, error) {
+func (h *AssignRolesHandler) Handle(cmd AssignRolesCommand) (map[userEntity.UserID]scenarioEntity.Role, error) {
 	// Get the game by ID
 	game, err := h.gameRepo.GetGameByID(cmd.GameID)
 	if err != nil {
@@ -58,17 +61,25 @@ func (h *AssignRolesHandler) Handle(cmd AssignRolesCommand) (map[string]scenario
 			return nil, fmt.Errorf("error fetching scenario: %w", err)
 		}
 		roles = scenario.Roles
+		// Sort roles by their hash
 		log.Printf("Using %d roles from scenario '%s'", len(roles), game.Scenario.ID)
 	}
+	sort.Slice(roles, func(i, j int) bool {
+		return common.Hash(roles[i].Name) < common.Hash(roles[j].Name)
+	})
 
 	// Get users - either use provided users or get from the game's room
 	var users []userEntity.User
 	if len(cmd.Users) > 0 {
 		users = cmd.Users
+		// Sort users by ID
+		sort.Slice(users, func(i, j int) bool {
+			return users[i].ID < users[j].ID
+		})
 	}
 
 	// Ensure we have enough roles for the players
-	if len(roles) < len(users) {
+	if len(roles) != len(users) {
 		log.Printf("Not enough roles (%d) for all players (%d)", len(roles), len(users))
 		return nil, errors.New("not enough roles for all players")
 	}
@@ -76,18 +87,19 @@ func (h *AssignRolesHandler) Handle(cmd AssignRolesCommand) (map[string]scenario
 	// Randomly assign roles to players
 	rolesToAssign := make([]scenarioEntity.Role, len(roles))
 	copy(rolesToAssign, roles)
+	rand.Seed(time.Now().UTC().UnixNano())
 	rand.Shuffle(len(rolesToAssign), func(i, j int) {
 		rolesToAssign[i], rolesToAssign[j] = rolesToAssign[j], rolesToAssign[i]
 	})
 
 	// Store assignments in the game entity and prepare response map
-	assignments := make(map[string]scenarioEntity.Role)
+	assignments := make(map[userEntity.UserID]scenarioEntity.Role)
 	for i, user := range users {
 		if i >= len(rolesToAssign) {
 			break // Safety check
 		}
 		game.AssignRole(user.ID, rolesToAssign[i])
-		assignments[strconv.FormatInt(int64(user.ID), 10)] = rolesToAssign[i]
+		assignments[user.ID] = rolesToAssign[i]
 		log.Printf("Assigned role '%s' to user ID %d", rolesToAssign[i].Name, user.ID)
 	}
 

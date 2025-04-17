@@ -71,6 +71,7 @@ func (h *BotHandler) HandleAssignRoles(c telebot.Context) error {
 		log.Printf("Error assigning roles: %v", err)
 		return c.Send(fmt.Sprintf("Error assigning roles: %v", err))
 	}
+	targetGame.Assignments = assignments
 
 	log.Printf("Successfully assigned %d roles", len(assignments))
 
@@ -89,7 +90,7 @@ func (h *BotHandler) HandleAssignRoles(c telebot.Context) error {
 }
 
 // formatAssignments formats the role assignments for display
-func (h *BotHandler) formatAssignments(assignments map[string]scenarioEntity.Role) string {
+func (h *BotHandler) formatAssignments(assignments map[userEntity.UserID]scenarioEntity.Role) string {
 	var result string
 
 	// Prepare a map of user IDs to users for easy lookup
@@ -107,7 +108,7 @@ func (h *BotHandler) formatAssignments(assignments map[string]scenarioEntity.Rol
 
 	// Format each assignment
 	for userID, role := range assignments {
-		userIDInt, _ := strconv.ParseInt(userID, 10, 64)
+		userIDInt := userID
 		uid := userEntity.UserID(userIDInt)
 
 		// Try to find the user in our map
