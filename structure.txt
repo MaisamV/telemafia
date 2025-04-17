@@ -1,0 +1,42 @@
+``` text
+internal/
+├── domain/                 <-- Central Domain Layer
+│   ├── room/               <-- Room Domain Module
+│   │   ├── entity/
+│   │   ├── usecase/        <-- Room Use Cases (Application Business Rules)
+│   │   │   ├── command/    <-- Commands (e.g., CreateRoomCommand, CreateRoomHandler)
+│   │   │   └── query/      <-- Queries (e.g., GetRoomQuery, GetRoomHandler)
+│   │   └── port/           <-- Ports (Interfaces for driven adapters)
+│   │       └── room_repository.go
+│   ├── scenario/           <-- Scenario Domain Module
+│   │   ├── entity/
+│   │   ├── usecase/        <-- With command/query subdirs
+│   │   └── port/
+│   │       └── scenario_repository.go
+│   └── game/               <-- Game Domain Module
+│       ├── entity/
+│       ├── usecase/        <-- With command/query subdirs
+│       └── port/
+│           └── game_repository.go
+│
+├── adapters/             <-- Infrastructure/Adapters Layer
+│   └── repository/       <-- Data Repository Adapters (Driven Adapters)
+│       ├── memory/         <-- Concrete implementation for memory storage
+│       │   ├── room_repo.go      <-- Implements domain.room.port.RoomRepository
+│       │   ├── scenario_repo.go  <-- Implements domain.scenario.port.ScenarioRepository
+│       │   └── game_repo.go      <-- Implements domain.game.port.GameRepository
+│       └── postgresql/     <-- (Example: Alternative DB implementation)
+│
+├── presentation/         <-- Presentation Layer (Driving Adapters)
+│   ├── telegram/         <-- Telegram Bot Adapter
+│   │   └── handler/        <-- Handlers mapping Telegram commands to domain use cases
+│   │       ├── create_room_handler.go # Translates bot command to domain.room.usecase.command.CreateRoom
+│   │       └── ...
+│   └── api/              <-- (Example: Future REST API adapter)
+│
+├── shared/               <-- Shared utilities, errors, cross-cutting concerns
+│   └── ...
+│
+└── config/               <-- Application Configuration
+    └── config.go
+```

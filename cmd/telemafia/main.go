@@ -3,23 +3,28 @@ package main
 import (
 	"fmt"
 	"log"
+	memrepo "telemafia/internal/adapters/repository/memory"
 	"telemafia/internal/config"
-	telegramHandler "telemafia/internal/interfaces/handler/telegram"
-	memrepo "telemafia/internal/interfaces/repository/memory"
-	"telemafia/internal/usecase"
-	"telemafia/pkg/event"
+	gameCommand "telemafia/internal/domain/game/usecase/command"
+	gameQuery "telemafia/internal/domain/game/usecase/query"
+	roomCommand "telemafia/internal/domain/room/usecase/command"
+	roomQuery "telemafia/internal/domain/room/usecase/query"
+	scenarioCommand "telemafia/internal/domain/scenario/usecase/command"
+	scenarioQuery "telemafia/internal/domain/scenario/usecase/query"
+	telegramHandler "telemafia/internal/presentation/telegram/handler"
+	"telemafia/internal/shared/event"
 	"time"
 
 	"gopkg.in/telebot.v3"
 )
 
-// EventPublisher implements event.Publisher (moved from config.go)
+// EventPublisher implements event.Publisher
 type EventPublisher struct{}
 
 func (p *EventPublisher) Publish(e event.Event) error {
 	// For now, just log the events
 	// TODO: Implement a proper event bus (e.g., using channels or a library)
-	log.Printf("Event published: %+v\n", e)
+	log.Printf("Event published: Type=%s, Data=%+v\n", e.EventName(), e)
 	return nil
 }
 
@@ -44,7 +49,7 @@ func main() {
 	botHandler.Start()
 }
 
-// initializeDependencies sets up and wires all components (moved from config.go)
+// initializeDependencies sets up and wires all components
 func initializeDependencies(cfg *config.Config) (*telegramHandler.BotHandler, error) {
 	// Initialize Telegram Bot
 	botSettings := telebot.Settings{
@@ -58,42 +63,49 @@ func initializeDependencies(cfg *config.Config) (*telegramHandler.BotHandler, er
 	}
 
 	// Initialize repositories (Adapters)
-	roomRepo := memrepo.NewInMemoryRepository()
+	// Use the new repository constructor names
+	roomRepo := memrepo.NewInMemoryRoomRepository()
 	scenarioRepo := memrepo.NewInMemoryScenarioRepository()
 	gameRepo := memrepo.NewInMemoryGameRepository()
 
 	// Initialize event publisher
 	eventPublisher := &EventPublisher{}
 
-	// Initialize use case handlers (Interactors)
-	createRoomHandler := usecase.NewCreateRoomHandler(roomRepo, eventPublisher)
-	joinRoomHandler := usecase.NewJoinRoomHandler(roomRepo, eventPublisher)
-	leaveRoomHandler := usecase.NewLeaveRoomHandler(roomRepo, eventPublisher)
-	kickUserHandler := usecase.NewKickUserHandler(roomRepo, eventPublisher)
-	deleteRoomHandler := usecase.NewDeleteRoomHandler(roomRepo)
-	resetChangeFlagHandler := usecase.NewResetChangeFlagCommand(roomRepo)
-	raiseChangeFlagHandler := usecase.NewRaiseChangeFlagHandler(roomRepo)
-	getRoomHandler := usecase.NewGetRoomHandler(roomRepo)
-	getRoomsHandler := usecase.NewGetRoomsHandler(roomRepo)
-	getPlayerRoomsHandler := usecase.NewGetPlayerRoomsHandler(roomRepo)
-	getPlayersInRoomsHandler := usecase.NewGetPlayersInRoomHandler(roomRepo)
-	checkChangeFlagHandler := usecase.NewCheckChangeFlagHandler(roomRepo)
-	createScenarioHandler := usecase.NewCreateScenarioHandler(scenarioRepo)
-	deleteScenarioHandler := usecase.NewDeleteScenarioHandler(scenarioRepo)
-	manageRolesHandler := usecase.NewManageRolesHandler(scenarioRepo)
-	getScenarioByIDHandler := usecase.NewGetScenarioByIDHandler(scenarioRepo)
-	getAllScenariosHandler := usecase.NewGetAllScenariosHandler(scenarioRepo)
+	// Initialize use case handlers (Interactors) - using new packages and constructor names
+	// Room Use Cases
+	createRoomHandler := roomCommand.NewCreateRoomHandler(roomRepo, eventPublisher)
+	joinRoomHandler := roomCommand.NewJoinRoomHandler(roomRepo, eventPublisher)
+	leaveRoomHandler := roomCommand.NewLeaveRoomHandler(roomRepo, eventPublisher)
+	kickUserHandler := roomCommand.NewKickUserHandler(roomRepo, eventPublisher)
+	deleteRoomHandler := roomCommand.NewDeleteRoomHandler(roomRepo)
+	resetChangeFlagHandler := roomCommand.NewResetChangeFlagHandler(roomRepo)
+	raiseChangeFlagHandler := roomCommand.NewRaiseChangeFlagHandler(roomRepo)
+	getRoomHandler := roomQuery.NewGetRoomHandler(roomRepo)
+	getRoomsHandler := roomQuery.NewGetRoomsHandler(roomRepo)
+	getPlayerRoomsHandler := roomQuery.NewGetPlayerRoomsHandler(roomRepo)
+	getPlayersInRoomsHandler := roomQuery.NewGetPlayersInRoomHandler(roomRepo)
+	checkChangeFlagHandler := roomQuery.NewCheckChangeFlagHandler(roomRepo)
+	// addDescriptionHandler := scenarioUsecase.NewAddDescriptionHandler(roomRepo) // Belongs in roomUsecase? Needs wiring if used.
 
-	createGameHandler := usecase.NewCreateGameHandler(gameRepo)
-	assignRolesHandler := usecase.NewAssignRolesHandler(gameRepo, scenarioRepo)
-	getGamesHandler := usecase.NewGetGamesHandler(gameRepo)
-	getGameByIDHandler := usecase.NewGetGameByIDHandler(gameRepo)
+	// Scenario Use Cases
+	createScenarioHandler := scenarioCommand.NewCreateScenarioHandler(scenarioRepo)
+	deleteScenarioHandler := scenarioCommand.NewDeleteScenarioHandler(scenarioRepo)
+	manageRolesHandler := scenarioCommand.NewManageRolesHandler(scenarioRepo)
+	getScenarioByIDHandler := scenarioQuery.NewGetScenarioByIDHandler(scenarioRepo)
+	getAllScenariosHandler := scenarioQuery.NewGetAllScenariosHandler(scenarioRepo)
+
+	// Game Use Cases
+	createGameHandler := gameCommand.NewCreateGameHandler(gameRepo)
+	assignRolesHandler := gameCommand.NewAssignRolesHandler(gameRepo, scenarioRepo, roomRepo)
+	getGamesHandler := gameQuery.NewGetGamesHandler(gameRepo)
+	getGameByIDHandler := gameQuery.NewGetGameByIDHandler(gameRepo)
 
 	// Initialize Telegram Bot Handler (Delivery Mechanism)
+	// Pass the correctly typed repository (roomRepo satisfies the interface needed by BotHandler)
 	botHandler := telegramHandler.NewBotHandler(
 		telegramBot,
 		cfg.AdminUsernames,
-		roomRepo,
+		roomRepo, // Pass the room repository
 		createRoomHandler,
 		joinRoomHandler,
 		leaveRoomHandler,
@@ -115,6 +127,7 @@ func initializeDependencies(cfg *config.Config) (*telegramHandler.BotHandler, er
 		createGameHandler,
 		getGamesHandler,
 		getGameByIDHandler,
+		// addDescriptionHandler, // Add if wired and used
 	)
 
 	return botHandler, nil
