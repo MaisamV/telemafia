@@ -109,12 +109,12 @@ func (h *BotHandler) RoomDetailMessage(roomID string) (string, *telebot.ReplyMar
 	// Format message with scenario information if available
 	var messageText string
 	if room.ScenarioName != "" {
-		messageText = fmt.Sprintf("Room: %s\nScenario: %s\nPlayers in the room:\n%s",
+		messageText = fmt.Sprintf("%s\nسناریو: %s\nمنتظر بمون تا نقش ها پخش بشه 💅🏻\n\nبازیکنان:\n%s",
 			room.Name,
 			room.ScenarioName,
 			playerNames)
 	} else {
-		messageText = fmt.Sprintf("Room: %s\nPlayers in the room:\n%s",
+		messageText = fmt.Sprintf("%s\nمنتظر بمون تا نقش ها پخش بشه 💅🏻\n\nبازیکنان:\n%s",
 			room.Name,
 			playerNames)
 	}

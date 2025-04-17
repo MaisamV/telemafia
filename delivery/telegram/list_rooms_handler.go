@@ -36,7 +36,7 @@ func (h *BotHandler) ListRoomsMessage() (string, *telebot.ReplyMarkup, error) {
 	var text string
 	var markup *telebot.ReplyMarkup = nil
 	if len(rooms) == 0 {
-		text = "فعلا بازی در حال شروع شدن نیست."
+		text = "فعلا بازی در حال شروع شدن نیست. ✍️✍️"
 	} else {
 		// Create inline keyboard
 		var buttons [][]telebot.InlineButton
@@ -54,7 +54,7 @@ func (h *BotHandler) ListRoomsMessage() (string, *telebot.ReplyMarkup, error) {
 				},
 			})
 		}
-		text = "Available rooms:"
+		text = "برای شروع بازی عضو یکی از گروه های زیر بشید:"
 		markup = &telebot.ReplyMarkup{
 			InlineKeyboard: buttons,
 		}
