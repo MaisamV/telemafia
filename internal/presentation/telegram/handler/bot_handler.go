@@ -1,7 +1,9 @@
 package telegram
 
 import (
+	"fmt"
 	"log"
+
 	// gameUsecase "telemafia/internal/game/usecase"
 	gameCommand "telemafia/internal/domain/game/usecase/command"
 	gameQuery "telemafia/internal/domain/game/usecase/query"
@@ -23,29 +25,29 @@ import (
 type BotHandler struct {
 	bot                     *telebot.Bot
 	adminUsernames          []string
-	roomRepo                roomPort.RoomWriter                 // Use roomPort
-	createRoomHandler       *roomCommand.CreateRoomHandler      // Use roomCommand
-	joinRoomHandler         *roomCommand.JoinRoomHandler        // Use roomCommand
-	leaveRoomHandler        *roomCommand.LeaveRoomHandler       // Use roomCommand
-	kickUserHandler         *roomCommand.KickUserHandler        // Use roomCommand
-	deleteRoomHandler       *roomCommand.DeleteRoomHandler      // Use roomCommand
-	resetRefreshHandler     *roomCommand.ResetChangeFlagHandler // Use roomCommand
-	raiseChangeFlagHandler  *roomCommand.RaiseChangeFlagHandler // Use roomCommand
-	getRoomsHandler         *roomQuery.GetRoomsHandler          // Use roomQuery
-	getPlayerRoomsHandler   *roomQuery.GetPlayerRoomsHandler    // Use roomQuery
-	getPlayersInRoomHandler *roomQuery.GetPlayersInRoomHandler  // Use roomQuery
-	getRoomHandler          *roomQuery.GetRoomHandler           // Use roomQuery
-	checkRefreshHandler     *roomQuery.CheckChangeFlagHandler   // Use roomQuery
-	// addDescriptionHandler   *roomCommand.AddDescriptionHandler   // Use roomCommand (if wiring this)
-	createScenarioHandler  *scenarioCommand.CreateScenarioHandler // Use scenarioCommand
-	deleteScenarioHandler  *scenarioCommand.DeleteScenarioHandler // Use scenarioCommand
-	manageRolesHandler     *scenarioCommand.ManageRolesHandler    // Use scenarioCommand
-	getScenarioByIDHandler *scenarioQuery.GetScenarioByIDHandler  // Use scenarioQuery
-	getAllScenariosHandler *scenarioQuery.GetAllScenariosHandler  // Use scenarioQuery
-	assignRolesHandler     *gameCommand.AssignRolesHandler        // Use gameCommand
-	createGameHandler      *gameCommand.CreateGameHandler         // Use gameCommand
-	getGamesHandler        *gameQuery.GetGamesHandler             // Use gameQuery
-	getGameByIDHandler     *gameQuery.GetGameByIDHandler          // Use gameQuery
+	roomRepo                roomPort.RoomWriter                    // Use roomPort
+	createRoomHandler       *roomCommand.CreateRoomHandler         // Use roomCommand
+	joinRoomHandler         *roomCommand.JoinRoomHandler           // Use roomCommand
+	leaveRoomHandler        *roomCommand.LeaveRoomHandler          // Use roomCommand
+	kickUserHandler         *roomCommand.KickUserHandler           // Use roomCommand
+	deleteRoomHandler       *roomCommand.DeleteRoomHandler         // Use roomCommand
+	resetRefreshHandler     *roomCommand.ResetChangeFlagHandler    // Use roomCommand
+	raiseChangeFlagHandler  *roomCommand.RaiseChangeFlagHandler    // Use roomCommand
+	getRoomsHandler         *roomQuery.GetRoomsHandler             // Use roomQuery
+	getPlayerRoomsHandler   *roomQuery.GetPlayerRoomsHandler       // Use roomQuery
+	getPlayersInRoomHandler *roomQuery.GetPlayersInRoomHandler     // Use roomQuery
+	getRoomHandler          *roomQuery.GetRoomHandler              // Use roomQuery
+	checkRefreshHandler     *roomQuery.CheckChangeFlagHandler      // Use roomQuery
+	addDescriptionHandler   *roomCommand.AddDescriptionHandler     // Add handler field
+	createScenarioHandler   *scenarioCommand.CreateScenarioHandler // Use scenarioCommand
+	deleteScenarioHandler   *scenarioCommand.DeleteScenarioHandler // Use scenarioCommand
+	manageRolesHandler      *scenarioCommand.ManageRolesHandler    // Use scenarioCommand
+	getScenarioByIDHandler  *scenarioQuery.GetScenarioByIDHandler  // Use scenarioQuery
+	getAllScenariosHandler  *scenarioQuery.GetAllScenariosHandler  // Use scenarioQuery
+	assignRolesHandler      *gameCommand.AssignRolesHandler        // Use gameCommand
+	createGameHandler       *gameCommand.CreateGameHandler         // Use gameCommand
+	getGamesHandler         *gameQuery.GetGamesHandler             // Use gameQuery
+	getGameByIDHandler      *gameQuery.GetGameByIDHandler          // Use gameQuery
 }
 
 // NewBotHandler creates a new BotHandler with all dependencies
@@ -65,7 +67,7 @@ func NewBotHandler(
 	getPlayersInRoomHandler *roomQuery.GetPlayersInRoomHandler, // Use roomQuery
 	getRoomHandler *roomQuery.GetRoomHandler, // Use roomQuery
 	checkRefreshHandler *roomQuery.CheckChangeFlagHandler, // Use roomQuery
-	// addDescriptionHandler *roomCommand.AddDescriptionHandler, // Use roomCommand (if wiring this)
+	addDescriptionHandler *roomCommand.AddDescriptionHandler, // Add handler param
 	createScenarioHandler *scenarioCommand.CreateScenarioHandler, // Use scenarioCommand
 	deleteScenarioHandler *scenarioCommand.DeleteScenarioHandler, // Use scenarioCommand
 	manageRolesHandler *scenarioCommand.ManageRolesHandler, // Use scenarioCommand
@@ -95,16 +97,16 @@ func NewBotHandler(
 		getPlayersInRoomHandler: getPlayersInRoomHandler,
 		getRoomHandler:          getRoomHandler,
 		checkRefreshHandler:     checkRefreshHandler,
-		// addDescriptionHandler:   addDescriptionHandler, // If wiring this
-		createScenarioHandler:  createScenarioHandler,
-		deleteScenarioHandler:  deleteScenarioHandler,
-		manageRolesHandler:     manageRolesHandler,
-		getScenarioByIDHandler: getScenarioByIDHandler,
-		getAllScenariosHandler: getAllScenariosHandler,
-		assignRolesHandler:     assignRolesHandler,
-		createGameHandler:      createGameHandler,
-		getGamesHandler:        getGamesHandler,
-		getGameByIDHandler:     getGameByIDHandler,
+		addDescriptionHandler:   addDescriptionHandler, // Assign handler
+		createScenarioHandler:   createScenarioHandler,
+		deleteScenarioHandler:   deleteScenarioHandler,
+		manageRolesHandler:      manageRolesHandler,
+		getScenarioByIDHandler:  getScenarioByIDHandler,
+		getAllScenariosHandler:  getAllScenariosHandler,
+		assignRolesHandler:      assignRolesHandler,
+		createGameHandler:       createGameHandler,
+		getGamesHandler:         getGamesHandler,
+		getGameByIDHandler:      getGameByIDHandler,
 	}
 }
 
@@ -119,37 +121,142 @@ func (h *BotHandler) Start() {
 
 // RegisterHandlers registers all bot command handlers
 func (h *BotHandler) RegisterHandlers() {
-	// Register handlers for commands (mapping to methods in handlers.go)
-	// These methods now use the injected handlers.
-	h.bot.Handle("/start", h.HandleStart)
-	h.bot.Handle("/help", h.HandleHelp)
-	h.bot.Handle("/create_room", h.HandleCreateRoom)
-	h.bot.Handle("/join_room", h.HandleJoinRoom)
-	h.bot.Handle("/leave_room", h.HandleLeaveRoom)
-	h.bot.Handle("/list_rooms", h.HandleListRooms)
-	h.bot.Handle("/my_rooms", h.HandleMyRooms)
-	h.bot.Handle("/kick_user", h.HandleKickUser)
-	h.bot.Handle("/delete_room", h.HandleDeleteRoom)
-	h.bot.Handle("/create_scenario", h.HandleCreateScenario)
-	h.bot.Handle("/delete_scenario", h.HandleDeleteScenario)
-	h.bot.Handle("/add_role", h.HandleAddRole)
-	h.bot.Handle("/remove_role", h.HandleRemoveRole)
-	h.bot.Handle("/assign_scenario", h.HandleAssignScenario) // This likely needs adjustment
-	h.bot.Handle("/assign_roles", h.HandleAssignRoles)
-	h.bot.Handle("/games", h.HandleGamesList) // This likely needs adjustment
-	// TODO: /list_scenarios command mentioned in README needs implementation/wiring
+	// Common Handlers
+	h.bot.Handle("/start", h.handleStart)
+	h.bot.Handle("/help", h.handleHelp)
+
+	// Room Handlers
+	h.bot.Handle("/create_room", h.handleCreateRoom)
+	h.bot.Handle("/join_room", h.handleJoinRoom)
+	h.bot.Handle("/leave_room", h.handleLeaveRoom)
+	h.bot.Handle("/list_rooms", h.handleListRooms)
+	h.bot.Handle("/my_rooms", h.handleMyRooms)
+	h.bot.Handle("/kick_user", h.handleKickUser)
+	h.bot.Handle("/delete_room", h.handleDeleteRoom)
+	// AddDescription is not a direct command
+
+	// Scenario Handlers
+	h.bot.Handle("/create_scenario", h.handleCreateScenario)
+	h.bot.Handle("/delete_scenario", h.handleDeleteScenario)
+	h.bot.Handle("/add_role", h.handleAddRole)
+	h.bot.Handle("/remove_role", h.handleRemoveRole)
+	// TODO: Add /list_scenarios handler
+
+	// Game Handlers
+	h.bot.Handle("/assign_scenario", h.handleAssignScenario) // Assigns scenario AND creates game
+	h.bot.Handle("/assign_roles", h.handleAssignRoles)
+	h.bot.Handle("/games", h.handleGamesList)
 
 	// Register handler for callback queries
-	h.bot.Handle(telebot.OnCallback, h.HandleCallback)
+	h.bot.Handle(telebot.OnCallback, h.handleCallback)
 
 	log.Println("Registered command and callback handlers.")
 }
 
-// REMOVED HandleGamesList method (logic moved to handlers.go)
-// func (h *BotHandler) HandleGamesList(c telebot.Context) error {
-// 	// Create a games list handler
-// 	gamesListHandler := NewGamesListHandler(h.bot, h.getGamesHandler)
-//
-// 	// Forward the call to the games list handler
-// 	return gamesListHandler.HandleGamesList(c)
+// --- Dispatcher Methods ---
+
+// --- Common ---
+func (h *BotHandler) handleStart(c telebot.Context) error {
+	return HandleStart(h, c)
+}
+
+func (h *BotHandler) handleHelp(c telebot.Context) error {
+	return HandleHelp(h, c)
+}
+
+// --- Room ---
+func (h *BotHandler) handleCreateRoom(c telebot.Context) error {
+	return HandleCreateRoom(h, c)
+}
+
+func (h *BotHandler) handleJoinRoom(c telebot.Context) error {
+	return HandleJoinRoom(h, c)
+}
+
+func (h *BotHandler) handleLeaveRoom(c telebot.Context) error {
+	return HandleLeaveRoom(h, c)
+}
+
+func (h *BotHandler) handleListRooms(c telebot.Context) error {
+	return HandleListRooms(h, c)
+}
+
+func (h *BotHandler) handleMyRooms(c telebot.Context) error {
+	return HandleMyRooms(h, c)
+}
+
+func (h *BotHandler) handleKickUser(c telebot.Context) error {
+	return HandleKickUser(h, c)
+}
+
+func (h *BotHandler) handleDeleteRoom(c telebot.Context) error {
+	return HandleDeleteRoom(h, c)
+}
+
+// --- Scenario ---
+func (h *BotHandler) handleCreateScenario(c telebot.Context) error {
+	return HandleCreateScenario(h, c)
+}
+
+func (h *BotHandler) handleDeleteScenario(c telebot.Context) error {
+	return HandleDeleteScenario(h, c)
+}
+
+func (h *BotHandler) handleAddRole(c telebot.Context) error {
+	return HandleAddRole(h, c)
+}
+
+func (h *BotHandler) handleRemoveRole(c telebot.Context) error {
+	return HandleRemoveRole(h, c)
+}
+
+// --- Game ---
+func (h *BotHandler) handleAssignScenario(c telebot.Context) error {
+	return HandleAssignScenario(h, c)
+}
+
+func (h *BotHandler) handleAssignRoles(c telebot.Context) error {
+	return HandleAssignRoles(h, c)
+}
+
+func (h *BotHandler) handleGamesList(c telebot.Context) error {
+	return HandleGamesList(h, c)
+}
+
+// --- Callbacks ---
+// Removed handleCallback dispatcher method - implementation is in callbacks.go
+// func (h *BotHandler) handleCallback(c telebot.Context) error {
+// 	return HandleCallback(h, c) // Assuming HandleCallback is now a function in callbacks.go
 // }
+
+// --- Internal Helper Handlers (originally part of BotHandler) ---
+
+// HandleHelp provides a simple help message.
+func (h *BotHandler) HandleHelp(c telebot.Context) error {
+	help := `Available commands:
+/start - Show welcome message & rooms
+/help - Show this help message
+/list_rooms - List all available rooms
+/my_rooms - List rooms you have joined
+/join_room <room_id> - Join a specific room
+/leave_room <room_id> - Leave the specified room
+
+Admin Commands:
+/create_room <room_name> - Create a new room
+/delete_room - Select a room to delete
+/kick_user <room_id> <user_id> - Kick a user from a room
+/create_scenario <scenario_name> - Create a new game scenario
+/delete_scenario <scenario_id> - Delete a scenario
+/add_role <scenario_id> <role_name> - Add a role to a scenario
+/remove_role <scenario_id> <role_name> - Remove a role from a scenario
+/assign_scenario <room_id> <scenario_id> - Assign a scenario to a room (creates a game)
+/games - List active games and their status
+/assign_roles <game_id> - Assign roles to players in a game`
+	return c.Send(help, &telebot.SendOptions{DisableWebPagePreview: true})
+}
+
+// HandleStart handles the /start command
+func (h *BotHandler) HandleStart(c telebot.Context) error {
+	_ = c.Send(fmt.Sprintf("Welcome, %s!", c.Sender().Username))
+	return h.SendOrUpdateRefreshingMessage(c.Sender().ID, ListRooms, "")
+}

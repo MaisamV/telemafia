@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	apiAdapter "telemafia/internal/adapters/api"
 	memrepo "telemafia/internal/adapters/repository/memory"
 	"telemafia/internal/config"
 	gameCommand "telemafia/internal/domain/game/usecase/command"
@@ -63,10 +64,13 @@ func initializeDependencies(cfg *config.Config) (*telegramHandler.BotHandler, er
 	}
 
 	// Initialize repositories (Adapters)
-	// Use the new repository constructor names
 	roomRepo := memrepo.NewInMemoryRoomRepository()
 	scenarioRepo := memrepo.NewInMemoryScenarioRepository()
 	gameRepo := memrepo.NewInMemoryGameRepository()
+
+	// Initialize API Client Adapters (using local repos for now)
+	roomClient := apiAdapter.NewLocalRoomClient(roomRepo)
+	scenarioClient := apiAdapter.NewLocalScenarioClient(scenarioRepo)
 
 	// Initialize event publisher
 	eventPublisher := &EventPublisher{}
@@ -78,14 +82,14 @@ func initializeDependencies(cfg *config.Config) (*telegramHandler.BotHandler, er
 	leaveRoomHandler := roomCommand.NewLeaveRoomHandler(roomRepo, eventPublisher)
 	kickUserHandler := roomCommand.NewKickUserHandler(roomRepo, eventPublisher)
 	deleteRoomHandler := roomCommand.NewDeleteRoomHandler(roomRepo)
-	resetChangeFlagHandler := roomCommand.NewResetChangeFlagHandler(roomRepo)
+	resetRefreshHandler := roomCommand.NewResetChangeFlagHandler(roomRepo)
 	raiseChangeFlagHandler := roomCommand.NewRaiseChangeFlagHandler(roomRepo)
 	getRoomHandler := roomQuery.NewGetRoomHandler(roomRepo)
 	getRoomsHandler := roomQuery.NewGetRoomsHandler(roomRepo)
 	getPlayerRoomsHandler := roomQuery.NewGetPlayerRoomsHandler(roomRepo)
 	getPlayersInRoomsHandler := roomQuery.NewGetPlayersInRoomHandler(roomRepo)
-	checkChangeFlagHandler := roomQuery.NewCheckChangeFlagHandler(roomRepo)
-	// addDescriptionHandler := scenarioUsecase.NewAddDescriptionHandler(roomRepo) // Belongs in roomUsecase? Needs wiring if used.
+	checkRefreshHandler := roomQuery.NewCheckChangeFlagHandler(roomRepo)
+	addDescriptionHandler := roomCommand.NewAddDescriptionHandler(roomRepo)
 
 	// Scenario Use Cases
 	createScenarioHandler := scenarioCommand.NewCreateScenarioHandler(scenarioRepo)
@@ -95,7 +99,7 @@ func initializeDependencies(cfg *config.Config) (*telegramHandler.BotHandler, er
 	getAllScenariosHandler := scenarioQuery.NewGetAllScenariosHandler(scenarioRepo)
 
 	// Game Use Cases
-	createGameHandler := gameCommand.NewCreateGameHandler(gameRepo)
+	createGameHandler := gameCommand.NewCreateGameHandler(gameRepo, roomClient, scenarioClient)
 	assignRolesHandler := gameCommand.NewAssignRolesHandler(gameRepo, scenarioRepo, roomRepo)
 	getGamesHandler := gameQuery.NewGetGamesHandler(gameRepo)
 	getGameByIDHandler := gameQuery.NewGetGameByIDHandler(gameRepo)
@@ -105,19 +109,20 @@ func initializeDependencies(cfg *config.Config) (*telegramHandler.BotHandler, er
 	botHandler := telegramHandler.NewBotHandler(
 		telegramBot,
 		cfg.AdminUsernames,
-		roomRepo, // Pass the room repository
+		roomRepo, // Pass the room repository (as RoomWriter)
 		createRoomHandler,
 		joinRoomHandler,
 		leaveRoomHandler,
 		kickUserHandler,
 		deleteRoomHandler,
-		resetChangeFlagHandler,
-		raiseChangeFlagHandler,
+		resetRefreshHandler,    // Corrected name
+		raiseChangeFlagHandler, // Corrected name
 		getRoomsHandler,
 		getPlayerRoomsHandler,
 		getPlayersInRoomsHandler,
 		getRoomHandler,
-		checkChangeFlagHandler,
+		checkRefreshHandler,   // Corrected name
+		addDescriptionHandler, // ADDED in correct position
 		createScenarioHandler,
 		deleteScenarioHandler,
 		manageRolesHandler,
@@ -127,7 +132,6 @@ func initializeDependencies(cfg *config.Config) (*telegramHandler.BotHandler, er
 		createGameHandler,
 		getGamesHandler,
 		getGameByIDHandler,
-		// addDescriptionHandler, // Add if wired and used
 	)
 
 	return botHandler, nil

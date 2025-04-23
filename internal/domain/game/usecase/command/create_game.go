@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	// gameEntity "telemafia/internal/game/entity"
@@ -18,42 +19,49 @@ import (
 
 // CreateGameCommand represents the command to create a new game
 type CreateGameCommand struct {
+	Requester  sharedEntity.User
 	RoomID     roomEntity.RoomID // Use imported RoomID type
 	ScenarioID string            // Scenario ID remains string based on entity
-	// We might need actual Room and Scenario objects/pointers here
-	// instead of just IDs to properly initialize the Game entity.
-	// This depends on whether the Game entity *needs* the full objects
-	// or just their references/IDs at creation time.
 }
 
 // CreateGameHandler handles game creation
 type CreateGameHandler struct {
-	gameRepo gamePort.GameRepository // Use imported GameRepository interface
-	// May need RoomReader and ScenarioReader ports injected here
-	// to fetch the actual Room and Scenario entities based on IDs.
+	gameRepo       gamePort.GameRepository // Use imported GameRepository interface
+	roomClient     gamePort.RoomClient     // Use the room client interface
+	scenarioClient gamePort.ScenarioClient // Use the scenario client interface
 }
 
 // NewCreateGameHandler creates a new CreateGameHandler
-func NewCreateGameHandler(repo gamePort.GameRepository) *CreateGameHandler {
+func NewCreateGameHandler(repo gamePort.GameRepository, roomClient gamePort.RoomClient, scenarioClient gamePort.ScenarioClient) *CreateGameHandler { // Add client dependencies
 	return &CreateGameHandler{
-		gameRepo: repo,
+		gameRepo:       repo,
+		roomClient:     roomClient,     // Store room client
+		scenarioClient: scenarioClient, // Store scenario client
 	}
 }
 
 // Handle processes the create game command
 func (h *CreateGameHandler) Handle(ctx context.Context, cmd CreateGameCommand) (*gameEntity.Game, error) {
-	// TODO: Fetch the actual Room and Scenario entities using their repositories
-	// room, err := h.roomRepo.GetRoomByID(cmd.RoomID)
-	// scenario, err := h.scenarioRepo.GetScenarioByID(cmd.ScenarioID)
-	// Handle errors...
+	// --- Permission Check ---
+	if !cmd.Requester.Admin {
+		return nil, errors.New("create game: admin privilege required")
+	}
+
+	// Fetch the actual Room and Scenario entities using the clients
+	room, err := h.roomClient.FetchRoom(cmd.RoomID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch room %s for game creation: %w", cmd.RoomID, err)
+	}
+	scenario, err := h.scenarioClient.FetchScenario(cmd.ScenarioID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch scenario %s for game creation: %w", cmd.ScenarioID, err)
+	}
 
 	// Create a new game entity
 	game := &gameEntity.Game{
-		ID: gameEntity.GameID(fmt.Sprintf("game_%d", time.Now().UnixNano())), // Simple unique ID generation
-		// Room:        room,     // Assign fetched room
-		// Scenario:    scenario, // Assign fetched scenario
-		Room:        &roomEntity.Room{ID: cmd.RoomID},             // TEMPORARY: Using placeholder ID
-		Scenario:    &scenarioEntity.Scenario{ID: cmd.ScenarioID}, // TEMPORARY: Using placeholder ID
+		ID:          gameEntity.GameID(fmt.Sprintf("game_%d", time.Now().UnixNano())), // Simple unique ID generation
+		Room:        room,                                                             // Assign fetched room pointer
+		Scenario:    scenario,                                                         // Assign fetched scenario pointer
 		State:       gameEntity.GameStateWaitingForPlayers,
 		Assignments: make(map[sharedEntity.UserID]scenarioEntity.Role), // Use imported types
 	}

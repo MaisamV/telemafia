@@ -19,7 +19,8 @@ import (
 
 // AssignRolesCommand represents a command to assign roles to players in a game
 type AssignRolesCommand struct {
-	GameID gameEntity.GameID // Use imported GameID type
+	Requester sharedEntity.User // Added
+	GameID    gameEntity.GameID // Use imported GameID type
 	// Users and Roles might be fetched within the handler based on GameID
 }
 
@@ -41,6 +42,11 @@ func NewAssignRolesHandler(gameRepo gamePort.GameRepository, scenarioRepo scenar
 
 // Handle processes the assign roles command
 func (h *AssignRolesHandler) Handle(ctx context.Context, cmd AssignRolesCommand) (map[sharedEntity.UserID]scenarioEntity.Role, error) { // Updated return type
+	// --- Permission Check ---
+	if !cmd.Requester.Admin {
+		return nil, errors.New("assign roles: admin privilege required")
+	}
+
 	// Get the game by ID
 	game, err := h.gameRepo.GetGameByID(cmd.GameID)
 	if err != nil {

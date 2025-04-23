@@ -12,7 +12,7 @@ import (
 
 // KickUserCommand represents the command to kick a user from a room
 type KickUserCommand struct {
-	Requester sharedEntity.User   // Use imported User type
+	Requester sharedEntity.User   // The user initiating the kick
 	RoomID    roomEntity.RoomID   // Use imported RoomID type
 	PlayerID  sharedEntity.UserID // Use imported UserID type
 }
@@ -33,11 +33,12 @@ func NewKickUserHandler(repo roomPort.RoomRepository, publisher sharedEvent.Publ
 
 // Handle processes the kick user command
 func (h *KickUserHandler) Handle(ctx context.Context, cmd KickUserCommand) error {
+	// --- Permission Check ---
 	if !cmd.Requester.Admin { // Assuming Admin field exists on sharedEntity.User
-		return errors.New("admin privilege required")
+		return errors.New("kick user: admin privilege required") // More specific error
 	}
 
-	// Check if the room exists (optional)
+	// Check if the room exists (optional, RemovePlayerFromRoom likely handles not found)
 	_, err := h.roomRepo.GetRoomByID(cmd.RoomID)
 	if err != nil {
 		return err

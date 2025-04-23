@@ -8,13 +8,17 @@ import (
 	roomPort "telemafia/internal/domain/room/port"
 	// scenarioEntity "telemafia/internal/scenario/entity"
 	// scenarioPort "telemafia/internal/scenario/port"
+	"errors"
+	"fmt"
+	sharedEntity "telemafia/internal/shared/entity" // Added for User
 )
 
 // AddDescriptionCommand represents the command to add a description to a room
 // NOTE: This seems more related to the Room domain than Scenario based on dependencies.
 // Consider moving this to internal/room/usecase/
 type AddDescriptionCommand struct {
-	RoomID          roomEntity.RoomID // Use imported RoomID type
+	Requester       sharedEntity.User // The user initiating the action
+	Room            *roomEntity.Room  // Pass the Room object directly
 	DescriptionName string
 	Text            string
 }
@@ -31,18 +35,23 @@ func NewAddDescriptionHandler(repo roomPort.RoomRepository) *AddDescriptionHandl
 
 // Handle processes the add description command
 func (h *AddDescriptionHandler) Handle(ctx context.Context, cmd AddDescriptionCommand) error {
-	room, err := h.roomRepo.GetRoomByID(cmd.RoomID) // Get the room
-	if err != nil {
-		return err // Propagates ErrRoomNotFound etc.
+	// --- Permission Check ---
+	if !cmd.Requester.Admin {
+		return errors.New("add description: admin privilege required")
 	}
 
-	// Assuming the entity method handles updating the map correctly.
-	// The persistence of this change might require an UpdateRoom method in the repo.
-	room.SetDescription(cmd.DescriptionName, cmd.Text)
+	if cmd.Room == nil {
+		return errors.New("cannot add description to nil room")
+	}
 
-	// TODO: Need to call an UpdateRoom method on the repository here?
-	// Example: return h.roomRepo.UpdateRoom(room)
-	// For now, assume the in-memory object reference is sufficient (dangerous for real persistence).
-	h.roomRepo.RaiseChangeFlag() // Mark as changed for potential in-memory save
+	// Modify the passed-in room object
+	cmd.Room.SetDescription(cmd.DescriptionName, cmd.Text)
+
+	// Persist the changes using UpdateRoom
+	if err := h.roomRepo.UpdateRoom(cmd.Room); err != nil {
+		return fmt.Errorf("failed to update room after adding description: %w", err)
+	}
+
+	// h.roomRepo.RaiseChangeFlag() // No longer needed, UpdateRoom handles the flag
 	return nil
 }

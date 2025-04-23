@@ -28,6 +28,9 @@ type RoomWriter interface {
 	// CreateRoom Create a new room
 	CreateRoom(room *roomEntity.Room) error
 
+	// UpdateRoom updates a room
+	UpdateRoom(room *roomEntity.Room) error
+
 	// AddPlayerToRoom Add a player to a room
 	AddPlayerToRoom(roomID roomEntity.RoomID, player *sharedEntity.User) error
 
@@ -42,12 +45,6 @@ type RoomWriter interface {
 
 	// RaiseChangeFlag sets the change flag to true
 	RaiseChangeFlag()
-
-	// AssignScenarioToRoom assigns a scenario to a room
-	AssignScenarioToRoom(roomID roomEntity.RoomID, scenarioName string) error
-
-	// GetRoomScenario gets the scenario assigned to a room
-	GetRoomScenario(roomID roomEntity.RoomID) (string, error)
 }
 
 // RoomRepository defines the combined interface for room persistence

@@ -194,32 +194,15 @@ func (r *InMemoryRoomRepository) RaiseChangeFlag() {
 	r.changeFlag = true
 }
 
-// AssignScenarioToRoom assigns a scenario to a room
-func (r *InMemoryRoomRepository) AssignScenarioToRoom(roomID roomEntity.RoomID, scenarioName string) error {
+// UpdateRoom updates an existing room
+func (r *InMemoryRoomRepository) UpdateRoom(room *roomEntity.Room) error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
-	room, exists := r.rooms[roomID]
-	if !exists {
+	if _, exists := r.rooms[room.ID]; !exists {
 		return roomEntity.ErrRoomNotFound
 	}
-	// Update the room entity directly
-	room.ScenarioName = scenarioName
-	// r.roomToScenario[roomID] = scenarioName // Removed
+	// Replace the existing entry
+	r.rooms[room.ID] = room
 	r.changeFlag = true // Mark change
 	return nil
-}
-
-// GetRoomScenario gets the scenario assigned to a room
-func (r *InMemoryRoomRepository) GetRoomScenario(roomID roomEntity.RoomID) (string, error) {
-	r.mutex.RLock()
-	defer r.mutex.RUnlock()
-	room, exists := r.rooms[roomID]
-	if !exists {
-		return "", roomEntity.ErrRoomNotFound
-	}
-	// scenarioName, ok := r.roomToScenario[roomID] // Removed
-	// if !ok {
-	// 	return "", fmt.Errorf("no scenario assigned to room %s", roomID)
-	// }
-	return room.ScenarioName, nil // Get from entity
 }
