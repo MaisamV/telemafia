@@ -8,18 +8,19 @@ import (
 
 	roomEntity "telemafia/internal/domain/room/entity"
 	roomCommand "telemafia/internal/domain/room/usecase/command"
+	tgutil "telemafia/internal/shared/tgutil"
 
 	"gopkg.in/telebot.v3"
 )
 
 // HandleCreateRoom handles the /create_room command (now a function)
-func HandleCreateRoom(h *BotHandler, c telebot.Context) error {
+func HandleCreateRoom(createRoomHandler *roomCommand.CreateRoomHandler, c telebot.Context) error {
 	args := strings.TrimSpace(c.Message().Payload)
 	if args == "" {
 		return c.Send("Please provide a room name: /create_room [name]")
 	}
 
-	user := ToUser(c.Sender()) // Get user info
+	user := tgutil.ToUser(c.Sender())
 	if user == nil {
 		return c.Send("Could not identify user.")
 	}
@@ -30,7 +31,7 @@ func HandleCreateRoom(h *BotHandler, c telebot.Context) error {
 		CreatorID: user.ID, // Pass CreatorID
 	}
 
-	createdRoom, err := h.createRoomHandler.Handle(context.Background(), cmd)
+	createdRoom, err := createRoomHandler.Handle(context.Background(), cmd)
 	if err != nil {
 		return c.Send(fmt.Sprintf("Error creating room: %v", err))
 	}

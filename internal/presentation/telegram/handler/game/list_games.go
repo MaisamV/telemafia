@@ -6,20 +6,26 @@ import (
 	"log"
 	"strings"
 
-	gameEntity "telemafia/internal/domain/game/entity"
 	gameQuery "telemafia/internal/domain/game/usecase/query"
+	tgutil "telemafia/internal/shared/tgutil"
 
 	"gopkg.in/telebot.v3"
 )
 
 // HandleGamesList handles the /games command (now a function)
-func HandleGamesList(h *BotHandler, c telebot.Context) error {
+func HandleGamesList(getGamesHandler *gameQuery.GetGamesHandler, c telebot.Context) error {
+	requester := tgutil.ToUser(c.Sender())
+	if requester == nil {
+		return c.Send("Could not identify requester.")
+	}
+
 	// Admin check remains here for now, as it's a query displaying potentially sensitive info
-	if !IsAdmin(c.Sender().Username) {
+	if !tgutil.IsAdmin(c.Sender().Username) {
 		return c.Send("You are not authorized to use this command.")
 	}
 
-	games, err := h.getGamesHandler.Handle(context.Background(), gameQuery.GetGamesQuery{})
+	query := gameQuery.GetGamesQuery{}
+	games, err := getGamesHandler.Handle(context.Background(), query)
 	if err != nil {
 		log.Printf("Error fetching games list: %v", err)
 		return c.Send(fmt.Sprintf("Error fetching games list: %v", err))
@@ -32,33 +38,30 @@ func HandleGamesList(h *BotHandler, c telebot.Context) error {
 	var response strings.Builder
 	response.WriteString("Active Games:\n")
 	for _, game := range games {
-		roomInfo := "(No Room Linked)"
+		roomName := "<Unknown>"
 		if game.Room != nil {
-			roomInfo = fmt.Sprintf("(Room: %s)", game.Room.ID)
+			roomName = game.Room.Name
 		}
-		scenarioInfo := "(No Scenario Linked)"
+		scenarioName := "<Unknown>"
 		if game.Scenario != nil {
-			scenarioName := game.Scenario.Name
-			if scenarioName == "" {
-				scenarioName = "(Name Unknown)"
-			}
-			scenarioInfo = fmt.Sprintf("(Scenario: %s, ID: %s)", scenarioName, game.Scenario.ID)
+			scenarioName = game.Scenario.Name
 		}
-		assignmentCount := len(game.Assignments)
+		response.WriteString(fmt.Sprintf("- GameID: `%s`\n  Room: %s (`%s`)\n  Scenario: %s (`%s`)\n  State: `%s`\n  Players/Assignments: %d\n",
+			game.ID, roomName, game.Room.ID, scenarioName, game.Scenario.ID, game.State, len(game.Assignments)))
 
-		response.WriteString(fmt.Sprintf("- Game ID: %s %s %s State: %s Players/Assignments: %d\n",
-			game.ID, roomInfo, scenarioInfo, game.State, assignmentCount))
-
-		if assignmentCount > 0 {
-			response.WriteString("  Assignments:\n")
-			response.WriteString(h.formatAssignments(game.Assignments))
-		} else if game.State == gameEntity.GameStateWaitingForPlayers {
-			response.WriteString(fmt.Sprintf("  Roles not assigned. Use /assign_roles %s\n", game.ID))
-		}
-		response.WriteString("\n")
+		// // Optionally, fetch and display assignments (might be too verbose)
+		// if len(game.Assignments) > 0 {
+		// 	response.WriteString("  Assignments:\n")
+		// 	for userID, role := range game.Assignments {
+		// 		// Need a way to get username from userID - this requires another query/lookup
+		// 		// For now, just showing ID
+		// 		response.WriteString(fmt.Sprintf("    %d: %s\n", userID, role.Name))
+		// 	}
+		// }
+		response.WriteString("\n") // Add a newline between games
 	}
 
-	return c.Send(response.String())
+	return c.Send(response.String(), &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
 }
 
 // formatAssignments removed - moved to util.go as method on BotHandler

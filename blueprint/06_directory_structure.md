@@ -76,11 +76,11 @@
 │   ├── presentation/     # Presentation Layer (Driving Adapters)
 │   │   └── telegram/     # Telegram Bot Adapter
 │   │       └── handler/    # Handlers mapping Telegram commands/callbacks to domain use cases
-│   │           ├── bot_handler.go       # Main handler struct, DI, registration, common handlers (/start, /help)
-│   │           ├── callbacks.go         # Main callback router (HandleCallback), constants
-│   │           ├── refresh.go           # Dynamic message refresh logic
-│   │           ├── util.go              # Helper functions (ToUser, SplitCallbackData)
-│   │           ├── room/                # Handlers related to the Room domain
+│   │           ├── bot_handler.go       # Main handler struct, DI, registration
+│   │           ├── callbacks.go         # Main callback router (HandleCallback)
+│   │           ├── refresh.go           # Dynamic message refresh logic (e.g., RefreshRoomsList)
+│   │           ├── common_handlers.go   # NEW: Handlers for /start, /help
+│   │           ├── room/                # EXPORTED Handlers related to the Room domain
 │   │           │   ├── create_room.go
 │   │           │   ├── join_room.go
 │   │           │   ├── leave_room.go
@@ -100,15 +100,18 @@
 │   │               ├── list_games.go
 │   │               └── callbacks_game.go
 │   └── shared/           # Shared components across layers/domains
-│       ├── common/       # General utility functions
+│       ├── common/       # General utility functions (DEPRECATED? -> see tgutil)
 │       │   └── utils.go
 │       ├── entity/       # Shared domain entities
 │       │   └── user.go
 │       ├── event/        # Domain event definitions and publisher interface
 │       │   ├── event.go  # Base Event interface and Publisher interface
 │       │   └── events.go # Concrete event structs (RoomCreated, PlayerJoined, etc.)
-│       └── logger/       # (Optional) Shared logger implementation
-│           └── logger.go
+│       ├── logger/       # (Optional) Shared logger implementation
+│       │   └── logger.go
+│       └── tgutil/       # NEW: Shared Telegram utility functions and constants
+│           ├── const.go
+│           └── util.go
 ├── README.md             # Project overview, setup, and usage instructions
 ├── structure.txt         # (Optional) Text version of this structure spec
 └── tests/                # Unit and integration tests (structure TBD)
@@ -124,6 +127,10 @@
 *   `presentation` contains concrete implementations for driving the application (like the Telegram bot handler).
 *   `cmd/telemafia/main.go` acts as the central point for dependency injection and application startup.
 *   `shared` holds code reusable across different parts of the application, avoiding direct dependencies between domain modules where possible.
-*   Telegram command and callback handlers are organized into subdirectories based on domain (`room`, `scenario`, `game`) within `internal/presentation/telegram/handler/`.
-*   Each handler generally resides in its own file.
-*   Common handlers, the main callback router, and utilities remain in the parent `handler` directory. 
+*   Telegram command and callback handlers are organized:
+    *   Domain-specific handlers (`/create_room`, `/assign_scenario`, etc.) reside in EXPORTED functions within subdirectories (`room/`, `scenario/`, `game/`).
+    *   Common handlers (`/start`, `/help`) reside in an EXPORTED function file (e.g., `common_handlers.go`) in the parent `handler` directory.
+    *   The main `BotHandler` struct, dispatcher methods, and the main callback router (`handleCallback`) remain in the parent `handler` directory (`bot_handler.go`, `callbacks.go`).
+    *   Dispatcher methods and the callback router call the exported handler functions from the corresponding files/sub-packages.
+*   Shared Telegram-specific utilities (`ToUser`, `IsAdmin`, etc.) and constants (`Unique...`) reside in `internal/shared/tgutil/`.
+*   Dynamic message refreshing logic (like `RefreshRoomsList`) resides in `refresh.go` and is initiated in `BotHandler.Start()`. 

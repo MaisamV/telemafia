@@ -29,6 +29,7 @@
     *   `Contains(slice []string, str string) bool`: Checks if a string exists in a slice of strings (case-sensitive).
     *   `StringToInt64(s string) (int64, error)`: Safely converts a string to `int64`.
     *   *(Other general-purpose helpers can be added here as needed)*
+*   **Note:** This package might be less used now that Telegram-specific utilities are in `tgutil`.
 
 ## 10.3. Shared Event System (`internal/shared/event/`)
 
@@ -58,4 +59,16 @@
 *   **Implementation:**
     *   A simple implementation of the `Publisher` interface should be provided in `cmd/telemafia/main.go`.
     *   For this version, the `Publish` method can simply log the event details using the standard `log` package (e.g., `log.Printf("Event published: Type=%s, Data=%+v\n", e.EventName(), e)`).
-    *   This implementation should be injected into command handlers that need to publish events. 
+    *   This implementation should be injected into command handlers that need to publish events.
+
+## 10.4. Shared Telegram Utilities (`internal/shared/tgutil/`)
+
+*   **Purpose:** Consolidate Telegram-specific constants and helper functions used by the presentation layer.
+*   **`const.go`:**
+    *   Defines `Unique...` constants for callback query identifiers.
+*   **`util.go`:**
+    *   Defines helper functions:
+        *   `SetAdminUsers(usernames []string)`: Stores admin usernames (package-level variable).
+        *   `IsAdmin(username string) bool`: Checks if a username is in the admin list.
+        *   `ToUser(sender *telebot.User) *sharedEntity.User`: Converts `telebot.User` to `sharedEntity.User`, checking admin status.
+        *   `SplitCallbackData(data string) (unique string, payload string)`: Parses callback data. 

@@ -8,20 +8,21 @@ import (
 
 	gameEntity "telemafia/internal/domain/game/entity"
 	gameCommand "telemafia/internal/domain/game/usecase/command"
+	tgutil "telemafia/internal/shared/tgutil"
 
 	"gopkg.in/telebot.v3"
 )
 
 // HandleAssignRoles handles the /assign_roles command (now a function)
-func HandleAssignRoles(h *BotHandler, c telebot.Context) error {
+func HandleAssignRoles(assignRolesHandler *gameCommand.AssignRolesHandler, c telebot.Context) error {
 	gameIDStr := strings.TrimSpace(c.Message().Payload)
 	if gameIDStr == "" {
-		return c.Send("Usage: /assign_roles <game_id>")
+		return c.Send("Please provide a game ID: /assign_roles <game_id>")
 	}
 
-	requester := ToUser(c.Sender())
+	requester := tgutil.ToUser(c.Sender())
 	if requester == nil {
-		return c.Send("Could not identify user.")
+		return c.Send("Could not identify requester.")
 	}
 	gameID := gameEntity.GameID(gameIDStr)
 
@@ -30,8 +31,8 @@ func HandleAssignRoles(h *BotHandler, c telebot.Context) error {
 		GameID:    gameID,
 	}
 
-	// Assignments are returned but ignored for now as private sending is commented out.
-	_, err := h.assignRolesHandler.Handle(context.Background(), cmd)
+	// Assignments are returned but private sending is handled via callback.
+	_, err := assignRolesHandler.Handle(context.Background(), cmd)
 	if err != nil {
 		log.Printf("Error assigning roles for game '%s': %v", gameID, err)
 		return c.Send(fmt.Sprintf("Error assigning roles for game '%s': %v", gameID, err))

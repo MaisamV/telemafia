@@ -7,19 +7,20 @@ import (
 
 	roomEntity "telemafia/internal/domain/room/entity"
 	roomCommand "telemafia/internal/domain/room/usecase/command"
+	tgutil "telemafia/internal/shared/tgutil"
 
 	"gopkg.in/telebot.v3"
 )
 
 // HandleJoinRoom handles the /join_room command (now a function)
-func HandleJoinRoom(h *BotHandler, c telebot.Context) error {
+func HandleJoinRoom(joinRoomHandler *roomCommand.JoinRoomHandler, c telebot.Context) error {
 	roomIDStr := strings.TrimSpace(c.Message().Payload)
 	if roomIDStr == "" {
 		return c.Send("Please provide a room ID: /join_room <room_id>")
 	}
 
 	roomID := roomEntity.RoomID(roomIDStr)
-	user := ToUser(c.Sender())
+	user := tgutil.ToUser(c.Sender())
 	if user == nil {
 		return c.Send("Could not identify user.")
 	}
@@ -29,12 +30,13 @@ func HandleJoinRoom(h *BotHandler, c telebot.Context) error {
 		RoomID:    roomID,
 	}
 
-	if err := h.joinRoomHandler.Handle(context.Background(), cmd); err != nil {
+	err := joinRoomHandler.Handle(context.Background(), cmd)
+	if err != nil {
 		return c.Send(fmt.Sprintf("Error joining room '%s': %v", roomID, err))
 	}
 
 	markup := &telebot.ReplyMarkup{}
-	btnLeave := markup.Data(fmt.Sprintf("Leave Room %s", roomID), UniqueLeaveRoomSelectRoom, string(roomID))
+	btnLeave := markup.Data(fmt.Sprintf("Leave Room %s", roomID), tgutil.UniqueLeaveRoomSelectRoom, string(roomID))
 	markup.Inline(markup.Row(btnLeave))
 
 	return c.Send(fmt.Sprintf("Successfully joined room %s", roomID), markup)

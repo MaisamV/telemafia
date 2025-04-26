@@ -3,6 +3,7 @@ package telegram
 import (
 	"fmt"
 	"log"
+	"telemafia/internal/shared/tgutil"
 
 	// gameUsecase "telemafia/internal/game/usecase"
 	gameCommand "telemafia/internal/domain/game/usecase/command"
@@ -17,6 +18,10 @@ import (
 	// scenarioUsecase "telemafia/internal/scenario/usecase"
 	scenarioCommand "telemafia/internal/domain/scenario/usecase/command"
 	scenarioQuery "telemafia/internal/domain/scenario/usecase/query"
+
+	game "telemafia/internal/presentation/telegram/handler/game"
+	room "telemafia/internal/presentation/telegram/handler/room"
+	scenario "telemafia/internal/presentation/telegram/handler/scenario"
 
 	"gopkg.in/telebot.v3"
 )
@@ -78,8 +83,8 @@ func NewBotHandler(
 	getGamesHandler *gameQuery.GetGamesHandler, // Use gameQuery
 	getGameByIDHandler *gameQuery.GetGameByIDHandler, // Use gameQuery
 ) *BotHandler {
-	// Set admin users for util package (now local)
-	SetAdminUsers(adminUsernames)
+	// Set admin users for util package (now moved)
+	tgutil.SetAdminUsers(adminUsernames) // Use tgutil
 
 	return &BotHandler{
 		bot:                     bot,
@@ -116,6 +121,7 @@ func (h *BotHandler) Start() {
 	// go h.RefreshRoomsList() // Assuming this is handled elsewhere or removed
 	// Start the bot's main loop (blocking)
 	log.Println("Starting bot polling...")
+	go h.RefreshRoomsList()
 	h.bot.Start()
 }
 
@@ -166,61 +172,61 @@ func (h *BotHandler) handleHelp(c telebot.Context) error {
 
 // --- Room ---
 func (h *BotHandler) handleCreateRoom(c telebot.Context) error {
-	return HandleCreateRoom(h, c)
+	return room.HandleCreateRoom(h.createRoomHandler, c)
 }
 
 func (h *BotHandler) handleJoinRoom(c telebot.Context) error {
-	return HandleJoinRoom(h, c)
+	return room.HandleJoinRoom(h.joinRoomHandler, c)
 }
 
 func (h *BotHandler) handleLeaveRoom(c telebot.Context) error {
-	return HandleLeaveRoom(h, c)
+	return room.HandleLeaveRoom(h.leaveRoomHandler, c)
 }
 
 func (h *BotHandler) handleListRooms(c telebot.Context) error {
-	return HandleListRooms(h, c)
+	return room.HandleListRooms(h.getRoomsHandler, h.getPlayersInRoomHandler, c)
 }
 
 func (h *BotHandler) handleMyRooms(c telebot.Context) error {
-	return HandleMyRooms(h, c)
+	return room.HandleMyRooms(h.getPlayerRoomsHandler, c)
 }
 
 func (h *BotHandler) handleKickUser(c telebot.Context) error {
-	return HandleKickUser(h, c)
+	return room.HandleKickUser(h.kickUserHandler, c)
 }
 
 func (h *BotHandler) handleDeleteRoom(c telebot.Context) error {
-	return HandleDeleteRoom(h, c)
+	return room.HandleDeleteRoom(h.getRoomsHandler, c) // Pass delete handler too
 }
 
 // --- Scenario ---
 func (h *BotHandler) handleCreateScenario(c telebot.Context) error {
-	return HandleCreateScenario(h, c)
+	return scenario.HandleCreateScenario(h.createScenarioHandler, c)
 }
 
 func (h *BotHandler) handleDeleteScenario(c telebot.Context) error {
-	return HandleDeleteScenario(h, c)
+	return scenario.HandleDeleteScenario(h.deleteScenarioHandler, c)
 }
 
 func (h *BotHandler) handleAddRole(c telebot.Context) error {
-	return HandleAddRole(h, c)
+	return scenario.HandleAddRole(h.manageRolesHandler, c)
 }
 
 func (h *BotHandler) handleRemoveRole(c telebot.Context) error {
-	return HandleRemoveRole(h, c)
+	return scenario.HandleRemoveRole(h.manageRolesHandler, c)
 }
 
 // --- Game ---
 func (h *BotHandler) handleAssignScenario(c telebot.Context) error {
-	return HandleAssignScenario(h, c)
+	return game.HandleAssignScenario(h.getRoomHandler, h.getScenarioByIDHandler, h.addDescriptionHandler, h.createGameHandler, c)
 }
 
 func (h *BotHandler) handleAssignRoles(c telebot.Context) error {
-	return HandleAssignRoles(h, c)
+	return game.HandleAssignRoles(h.assignRolesHandler, c)
 }
 
 func (h *BotHandler) handleGamesList(c telebot.Context) error {
-	return HandleGamesList(h, c)
+	return game.HandleGamesList(h.getGamesHandler, c)
 }
 
 // --- Callbacks ---
@@ -230,30 +236,6 @@ func (h *BotHandler) handleGamesList(c telebot.Context) error {
 // }
 
 // --- Internal Helper Handlers (originally part of BotHandler) ---
-
-// HandleHelp provides a simple help message.
-func (h *BotHandler) HandleHelp(c telebot.Context) error {
-	help := `Available commands:
-/start - Show welcome message & rooms
-/help - Show this help message
-/list_rooms - List all available rooms
-/my_rooms - List rooms you have joined
-/join_room <room_id> - Join a specific room
-/leave_room <room_id> - Leave the specified room
-
-Admin Commands:
-/create_room <room_name> - Create a new room
-/delete_room - Select a room to delete
-/kick_user <room_id> <user_id> - Kick a user from a room
-/create_scenario <scenario_name> - Create a new game scenario
-/delete_scenario <scenario_id> - Delete a scenario
-/add_role <scenario_id> <role_name> - Add a role to a scenario
-/remove_role <scenario_id> <role_name> - Remove a role from a scenario
-/assign_scenario <room_id> <scenario_id> - Assign a scenario to a room (creates a game)
-/games - List active games and their status
-/assign_roles <game_id> - Assign roles to players in a game`
-	return c.Send(help, &telebot.SendOptions{DisableWebPagePreview: true})
-}
 
 // HandleStart handles the /start command
 func (h *BotHandler) HandleStart(c telebot.Context) error {

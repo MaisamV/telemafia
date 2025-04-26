@@ -6,6 +6,7 @@ import (
 	"log"
 	"strings"
 	"sync"
+	"telemafia/internal/shared/tgutil"
 	"time"
 
 	roomCommand "telemafia/internal/domain/room/usecase/command"
@@ -117,7 +118,7 @@ func (h *BotHandler) prepareListRoomsMessage() (string, *telebot.ReplyMarkup, er
 			playerCount := len(players)
 			maxPlayers := 10 // TODO: Define elsewhere
 			response.WriteString(fmt.Sprintf("- %s (%s) [%d/%d players]\n", room.Name, room.ID, playerCount, maxPlayers))
-			btnJoin := markup.Data(fmt.Sprintf("Join %s", room.Name), UniqueJoinRoom, string(room.ID))
+			btnJoin := markup.Data(fmt.Sprintf("Join %s", room.Name), tgutil.UniqueJoinRoom, string(room.ID))
 			rows = append(rows, markup.Row(btnJoin))
 		}
 	}

@@ -11,8 +11,9 @@ import (
 )
 
 // HandleListRooms handles the /list_rooms command (now a function)
-func HandleListRooms(h *BotHandler, c telebot.Context) error {
-	rooms, err := h.getRoomsHandler.Handle(context.Background(), roomQuery.GetRoomsQuery{})
+func HandleListRooms(getRoomsHandler *roomQuery.GetRoomsHandler, getPlayersInRoomHandler *roomQuery.GetPlayersInRoomHandler, c telebot.Context) error {
+	query := roomQuery.GetRoomsQuery{}
+	rooms, err := getRoomsHandler.Handle(context.Background(), query)
 	if err != nil {
 		return c.Send(fmt.Sprintf("Error getting rooms: %v", err))
 	}
@@ -24,7 +25,7 @@ func HandleListRooms(h *BotHandler, c telebot.Context) error {
 	var response strings.Builder
 	response.WriteString("Available Rooms:\n")
 	for _, room := range rooms {
-		players, _ := h.getPlayersInRoomHandler.Handle(context.Background(), roomQuery.GetPlayersInRoomQuery{RoomID: room.ID})
+		players, _ := getPlayersInRoomHandler.Handle(context.Background(), roomQuery.GetPlayersInRoomQuery{RoomID: room.ID})
 		playerCount := len(players)
 		maxPlayers := 10
 		response.WriteString(fmt.Sprintf("- %s (%s) [%d/%d players]\n", room.Name, room.ID, playerCount, maxPlayers))

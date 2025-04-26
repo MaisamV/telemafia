@@ -41,32 +41,56 @@
     *   It **MUST** receive the initialized `*telebot.Bot` instance and all necessary domain *use case handlers* (e.g., `*roomCommand.CreateRoomHandler`, `*roomQuery.GetRoomsHandler`, etc.) via its constructor (`NewBotHandler`).
     *   It should also store the list of admin usernames loaded from configuration.
     *   Must receive `*roomCommand.AddDescriptionHandler` via constructor.
-    *   `RegisterHandlers()` method: Maps Telegram command strings (e.g., `/start`, `/create_room`) to specific handler methods within this package (e.g., `h.HandleStart`, `h.HandleCreateRoom`) using `bot.Handle()`.
-    *   `Start()` method: Calls `bot.Start()` to begin polling for updates.
+    *   `RegisterHandlers()` method: Maps Telegram command strings (e.g., `/start`, `/create_room`) to specific handler methods within this package (e.g., `h.HandleStart`, `h.HandleCreateRoom`) using `bot.Handle()`. These dispatcher methods then call the actual exported handler functions.
+    *   `Start()` method: Calls `bot.Start()` to begin polling for updates. **Also initiates background tasks like `RefreshRoomsList`**.
 *   **Command Handler Methods (e.g., `HandleCreateRoom`, `HandleJoinRoom` in `handlers.go`):**
-    *   These methods receive the `telebot.Context`.
+*   **Command Handler Functions:**
+    *   Located in `common_handlers.go` (for `/start`, `/help`) or within `room/`, `scenario/`, `game/` sub-packages for domain-specific commands.
+    *   Functions are **EXPORTED** (public).
+    *   Receive specific required use case handlers and `telebot.Context` as arguments (not the full `BotHandler`).
     *   **Input Parsing:** Extract command arguments from `c.Message().Payload`. Use `strings.TrimSpace`, `strings.Fields`, etc., for parsing.
-    *   **User Conversion:** Convert the `*telebot.User` (from `c.Sender()`) to the internal `*sharedEntity.User` using the `util.ToUser()` helper function.
-    *   **Use Case Invocation:** Create the appropriate domain Command or Query struct (e.g., `roomCommand.CreateRoomCommand`) with data parsed from the input and the converted User object (including the `Requester` field for commands needing it).
-    *   Call the `Handle` method of the corresponding injected use case handler (e.g., `h.createRoomHandler.Handle(context.Background(), cmd)`).
+    *   **User Conversion:** Convert the `*telebot.User` (from `c.Sender()`) to the internal `*sharedEntity.User` using `tgutil.ToUser()`. Check for `nil`.
+    *   **Use Case Invocation:** Create the appropriate domain Command or Query struct (e.g., `roomCommand.CreateRoomCommand`) with data parsed from the input and the converted User object (including the `Requester` field for commands needing authorization check within the use case).
+    *   Call the `Handle` method of the corresponding injected use case handler (e.g., `createRoomHandler.Handle(context.Background(), cmd)`).
     *   **Response Handling:** Based on the error or result from the use case handler, send appropriate messages back to the user via `c.Send()`. Format messages clearly. Use inline keyboards (`telebot.ReplyMarkup`) for callbacks/actions where necessary.
 *   **`HandleAssignScenario` Method:**
-    *   Fetches Room and Scenario.
-    *   Sets `room.ScenarioName` (e.g., to `scenario.ID`).
-    *   Creates `roomCommand.AddDescriptionCommand` passing the fetched `room`, the `requester`, a key like "scenario_info", and descriptive text (e.g., scenario name).
-    *   Calls `h.addDescriptionHandler.Handle(...)` (admin check inside).
-    *   Creates `gameCommand.CreateGameCommand` passing the `requester`.
-    *   Calls `h.createGameHandler.Handle(...)` (admin check inside).
+*   **`game.HandleAssignScenario` Function:**
+    *   Example of a domain-specific handler function.
+    *   Receives `GetRoomHandler`, `GetScenarioByIDHandler`, `AddDescriptionHandler`, `CreateGameHandler`, and `telebot.Context`.
+    *   Fetches Room and Scenario using injected query handlers.
+    *   Calls `addDescriptionHandler.Handle(...)` to update the room description.
+    *   Calls `createGameHandler.Handle(...)` to create the game.
     *   Handles errors and sends appropriate response.
-*   **Callback Handling (`HandleCallback`):**
-    *   Handles `telebot.OnCallback` events.
-    *   Extract the `unique` identifier and `payload` from `c.Callback().Data` (using a helper like `SplitCallbackData`).
-    *   Use a `switch` statement on the `unique` identifier to route to specific callback logic functions (e.g., `handleDeleteRoomConfirmCallback`).
+*   **Callback Handling (`callbacks.go`):**
+    *   `handleCallback` method on `BotHandler` handles `telebot.OnCallback` events.
+    *   Extract the `unique` identifier and `payload` from `c.Callback().Data` using `tgutil.SplitCallbackData()`.
+    *   Use a `switch` statement on the `unique` identifier (using `tgutil.Unique...` constants) to route to specific *exported* callback logic functions (e.g., `room.HandleDeleteRoomConfirmCallback`).
+    *   These exported callback functions receive the necessary use case handlers and `telebot.Context`.
     *   Use `c.Respond()` to acknowledge the callback (dismiss loading indicators).
     *   Use `c.Edit()` to modify the original message (e.g., change text, remove keyboard) or `c.Delete()` to remove it.
-*   **Utility Functions (`util.go`):**
+*   **Utility Functions (`util.go`)**
     *   `SetAdminUsers(usernames []string)`: Stores admin list locally.
     *   `ToUser(sender *telebot.User) *sharedEntity.User`: Converts Telegram user to internal user entity. Includes setting the `Admin` flag based on the stored admin list.
     *   `SplitCallbackData(data string) (unique string, payload string)`: Parses callback data.
+
+*   **(DEPRECATED - Moved to `internal/shared/tgutil/`)** Utility Functions (`util.go`):
+    *   `SetAdminUsers(usernames []string)`
+    *   `ToUser(sender *telebot.User) *sharedEntity.User`
+    *   `IsAdmin(username string) bool`
+    *   `SplitCallbackData(data string) (unique string, payload string)`
+*   **(NEW)** Shared Utilities (`internal/shared/tgutil/util.go`):
+    *   Provides functions like `SetAdminUsers`, `IsAdmin`, `ToUser`, `SplitCallbackData`.
+    *   Imported and used by handlers in `internal/presentation/telegram/handler` and its sub-packages.
+*   **(NEW)** Shared Constants (`internal/shared/tgutil/const.go`):
+    *   Defines constants like `UniqueJoinRoom`, `UniqueCancel`, etc.
+    *   Imported and used by handlers.
 *   **Error Handling:** Handle errors from use case handlers gracefully, sending informative messages to the user.
-*   **Context:** Pass `context.Background()` to use case handlers for now, unless specific cancellation/deadline logic is required. 
+*   **Context:** Pass `context.Background()` to use case handlers for now, unless specific cancellation/deadline logic is required.
+*   **Handler Structure:**
+    *   Dispatcher methods on `BotHandler` (e.g., `handleCreateRoom`) map incoming Telegram commands/callbacks.
+    *   These dispatchers call *exported* handler functions (e.g., `room.HandleCreateRoom`, `HandleStart`) located in the respective files (`common_handlers.go`) or sub-packages (`internal/presentation/telegram/handler/[room|game|scenario]/`).
+    *   The exported handler functions receive specific use case handlers and `telebot.Context` as arguments.
+    *   They utilize functions and constants imported from `internal/shared/tgutil`.
+*   **(NEW)** Background Tasks (`refresh.go`):
+    *   Contains logic for dynamic message updates (e.g., `RefreshRoomsList`).
+    *   Initiated via goroutine in `BotHandler.Start()`. 

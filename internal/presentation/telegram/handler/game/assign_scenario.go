@@ -11,65 +11,70 @@ import (
 	roomCommand "telemafia/internal/domain/room/usecase/command"
 	roomQuery "telemafia/internal/domain/room/usecase/query"
 	scenarioQuery "telemafia/internal/domain/scenario/usecase/query"
+	tgutil "telemafia/internal/shared/tgutil"
 
 	"gopkg.in/telebot.v3"
 )
 
 // HandleAssignScenario handles the /assign_scenario command (now a function)
-func HandleAssignScenario(h *BotHandler, c telebot.Context) error {
-	args := strings.Fields(strings.TrimSpace(c.Message().Payload))
-	if len(args) != 2 {
+func HandleAssignScenario(
+	getRoomHandler *roomQuery.GetRoomHandler,
+	getScenarioByIDHandler *scenarioQuery.GetScenarioByIDHandler,
+	addDescriptionHandler *roomCommand.AddDescriptionHandler,
+	createGameHandler *gameCommand.CreateGameHandler,
+	c telebot.Context,
+) error {
+	parts := strings.Fields(c.Message().Payload)
+	if len(parts) != 2 {
 		return c.Send("Usage: /assign_scenario <room_id> <scenario_id>")
 	}
+	roomIDStr := parts[0]
+	scenarioID := parts[1]
 
-	roomID := roomEntity.RoomID(args[0])
-	scenarioID := args[1]
-	requester := ToUser(c.Sender())
+	requester := tgutil.ToUser(c.Sender())
 	if requester == nil {
-		return c.Send("Could not identify user.")
+		return c.Send("Could not identify requester.")
 	}
 
-	// 1. Fetch Room (Needed for AddDescription)
-	room, err := h.getRoomHandler.Handle(context.Background(), roomQuery.GetRoomQuery{RoomID: roomID})
+	roomQuery := roomQuery.GetRoomQuery{RoomID: roomEntity.RoomID(roomIDStr)}
+	room, err := getRoomHandler.Handle(context.Background(), roomQuery)
 	if err != nil {
-		return c.Send(fmt.Sprintf("Error fetching room '%s': %v", roomID, err))
+		return c.Send(fmt.Sprintf("Error finding room '%s': %v", roomIDStr, err))
 	}
 	if room == nil {
-		return c.Send(fmt.Sprintf("Room '%s' not found.", roomID))
+		return c.Send(fmt.Sprintf("Room '%s' not found.", roomIDStr))
 	}
 
-	// 2. Fetch Scenario (Needed for Description Text)
-	scen, err := h.getScenarioByIDHandler.Handle(context.Background(), scenarioQuery.GetScenarioByIDQuery{ID: scenarioID})
+	scenarioQuery := scenarioQuery.GetScenarioByIDQuery{ID: scenarioID}
+	scenario, err := getScenarioByIDHandler.Handle(context.Background(), scenarioQuery)
 	if err != nil {
-		return c.Send(fmt.Sprintf("Error fetching scenario '%s': %v", scenarioID, err))
+		return c.Send(fmt.Sprintf("Error finding scenario '%s': %v", scenarioID, err))
 	}
-	if scen == nil {
+	if scenario == nil {
 		return c.Send(fmt.Sprintf("Scenario '%s' not found.", scenarioID))
 	}
 
-	// 3. Add/Update Scenario Description in Room (Admin check happens in AddDescriptionHandler)
-	descCmd := roomCommand.AddDescriptionCommand{
+	roomDescriptionCmd := roomCommand.AddDescriptionCommand{
 		Requester:       *requester,
 		Room:            room,
 		DescriptionName: "scenario_info",
-		Text:            fmt.Sprintf("Scenario: %s (%d roles)", scen.Name, len(scen.Roles)),
+		Text:            fmt.Sprintf("Scenario: %s (ID: %s)", scenario.Name, scenario.ID),
 	}
-	if err := h.addDescriptionHandler.Handle(context.Background(), descCmd); err != nil {
-		log.Printf("Error adding scenario description to room '%s': %v", roomID, err)
-		// Continue even if description fails, game creation is more critical
+	if err := addDescriptionHandler.Handle(context.Background(), roomDescriptionCmd); err != nil {
+		log.Printf("Error updating room '%s' with scenario info: %v", room.Name, err)
+		return c.Send(fmt.Sprintf("Error updating room '%s' with scenario info: %v", room.Name, err))
 	}
 
-	// 4. Create the Game (Admin check happens in CreateGameHandler)
 	createGameCmd := gameCommand.CreateGameCommand{
 		Requester:  *requester,
-		RoomID:     roomID,
-		ScenarioID: scenarioID,
+		RoomID:     room.ID,
+		ScenarioID: scenario.ID,
 	}
-
-	game, err := h.createGameHandler.Handle(context.Background(), createGameCmd)
+	createdGame, err := createGameHandler.Handle(context.Background(), createGameCmd)
 	if err != nil {
-		return c.Send(fmt.Sprintf("Error creating game for room '%s' with scenario '%s': %v", roomID, scenarioID, err))
+		return c.Send(fmt.Sprintf("Scenario assigned, but failed to create game: %v", err))
 	}
 
-	return c.Send(fmt.Sprintf("Game created (ID: %s) and scenario '%s' assigned to room '%s'!", game.ID, scenarioID, roomID))
+	return c.Send(fmt.Sprintf("Successfully assigned scenario '%s' (ID: %s) to room '%s' (ID: %s) and created game '%s'",
+		scenario.Name, scenario.ID, room.Name, room.ID, createdGame.ID))
 }

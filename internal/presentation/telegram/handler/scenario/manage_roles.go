@@ -7,54 +7,61 @@ import (
 
 	scenarioEntity "telemafia/internal/domain/scenario/entity"
 	scenarioCommand "telemafia/internal/domain/scenario/usecase/command"
+	tgutil "telemafia/internal/shared/tgutil"
 
 	"gopkg.in/telebot.v3"
 )
 
-// HandleAddRole handles the /add_role command (now a function)
-func HandleAddRole(h *BotHandler, c telebot.Context) error {
-	args := strings.Fields(strings.TrimSpace(c.Message().Payload))
-	if len(args) != 2 {
+// HandleAddRole handles adding a role via /add_role (now a function)
+func HandleAddRole(manageRolesHandler *scenarioCommand.ManageRolesHandler, c telebot.Context) error {
+	parts := strings.Fields(c.Message().Payload)
+	if len(parts) < 2 {
 		return c.Send("Usage: /add_role <scenario_id> <role_name>")
 	}
 
-	requester := ToUser(c.Sender())
+	scenarioID := parts[0]
+	roleName := parts[1]
+
+	requester := tgutil.ToUser(c.Sender())
 	if requester == nil {
-		return c.Send("Could not identify user.")
+		return c.Send("Could not identify requester.")
 	}
 
 	cmd := scenarioCommand.AddRoleCommand{
 		Requester:  *requester,
-		ScenarioID: args[0],
-		Role:       scenarioEntity.Role{Name: args[1]},
+		ScenarioID: scenarioID,
+		Role:       scenarioEntity.Role{Name: roleName},
 	}
-	if err := h.manageRolesHandler.HandleAddRole(context.Background(), cmd); err != nil {
-		return c.Send(fmt.Sprintf("Error adding role '%s' to scenario '%s': %v", args[1], args[0], err))
+	if err := manageRolesHandler.HandleAddRole(context.Background(), cmd); err != nil {
+		return c.Send(fmt.Sprintf("Error adding role '%s' to scenario '%s': %v", roleName, scenarioID, err))
 	}
 
-	return c.Send(fmt.Sprintf("Role '%s' added to scenario %s successfully!", args[1], args[0]))
+	return c.Send(fmt.Sprintf("Role '%s' added to scenario %s successfully!", roleName, scenarioID))
 }
 
-// HandleRemoveRole handles the /remove_role command (now a function)
-func HandleRemoveRole(h *BotHandler, c telebot.Context) error {
-	args := strings.Fields(strings.TrimSpace(c.Message().Payload))
-	if len(args) != 2 {
+// HandleRemoveRole handles removing a role via /remove_role (now a function)
+func HandleRemoveRole(manageRolesHandler *scenarioCommand.ManageRolesHandler, c telebot.Context) error {
+	parts := strings.Fields(c.Message().Payload)
+	if len(parts) != 2 {
 		return c.Send("Usage: /remove_role <scenario_id> <role_name>")
 	}
 
-	requester := ToUser(c.Sender())
+	scenarioID := parts[0]
+	roleName := parts[1]
+
+	requester := tgutil.ToUser(c.Sender())
 	if requester == nil {
-		return c.Send("Could not identify user.")
+		return c.Send("Could not identify requester.")
 	}
 
 	cmd := scenarioCommand.RemoveRoleCommand{
 		Requester:  *requester,
-		ScenarioID: args[0],
-		RoleName:   args[1],
+		ScenarioID: scenarioID,
+		RoleName:   roleName,
 	}
-	if err := h.manageRolesHandler.HandleRemoveRole(context.Background(), cmd); err != nil {
-		return c.Send(fmt.Sprintf("Error removing role '%s' from scenario '%s': %v", args[1], args[0], err))
+	if err := manageRolesHandler.HandleRemoveRole(context.Background(), cmd); err != nil {
+		return c.Send(fmt.Sprintf("Error removing role '%s' from scenario '%s': %v", roleName, scenarioID, err))
 	}
 
-	return c.Send(fmt.Sprintf("Role '%s' removed from scenario %s successfully!", args[1], args[0]))
+	return c.Send(fmt.Sprintf("Role '%s' removed from scenario %s successfully!", roleName, scenarioID))
 }

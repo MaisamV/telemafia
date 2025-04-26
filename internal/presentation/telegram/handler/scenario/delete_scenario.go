@@ -6,26 +6,27 @@ import (
 	"strings"
 
 	scenarioCommand "telemafia/internal/domain/scenario/usecase/command"
+	tgutil "telemafia/internal/shared/tgutil"
 
 	"gopkg.in/telebot.v3"
 )
 
-// HandleDeleteScenario handles the /delete_scenario command
-func HandleDeleteScenario(h *BotHandler, c telebot.Context) error {
-	args := strings.TrimSpace(c.Message().Payload)
-	if args == "" {
+// HandleDeleteScenario handles the /delete_scenario command (now a function)
+func HandleDeleteScenario(deleteScenarioHandler *scenarioCommand.DeleteScenarioHandler, c telebot.Context) error {
+	scenarioID := strings.TrimSpace(c.Message().Payload)
+	if scenarioID == "" {
 		return c.Send("Please provide a scenario ID: /delete_scenario <id>")
 	}
 
-	requester := ToUser(c.Sender())
+	requester := tgutil.ToUser(c.Sender())
 
 	cmd := scenarioCommand.DeleteScenarioCommand{
 		Requester: *requester,
-		ID:        args,
+		ID:        scenarioID,
 	}
-	if err := h.deleteScenarioHandler.Handle(context.Background(), cmd); err != nil {
-		return c.Send(fmt.Sprintf("Error deleting scenario '%s': %v", args, err))
+	if err := deleteScenarioHandler.Handle(context.Background(), cmd); err != nil {
+		return c.Send(fmt.Sprintf("Error deleting scenario '%s': %v", scenarioID, err))
 	}
 
-	return c.Send(fmt.Sprintf("Scenario %s deleted successfully!", args))
+	return c.Send(fmt.Sprintf("Scenario %s deleted successfully!", scenarioID))
 }
