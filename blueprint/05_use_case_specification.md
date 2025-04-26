@@ -58,19 +58,7 @@
         1.  Call `roomRepo.DeleteRoom(cmd.RoomID)`.
         2.  Return error from repository.
 
-6.  **Raise Change Flag** (In-Memory Specific)
-    *   **Command Struct:** `RaiseChangeFlagCommand {}`
-    *   **Handler:** `RaiseChangeFlagHandler`
-    *   **Dependencies:** `roomPort.RoomWriter`
-    *   **Steps:** Call `roomRepo.RaiseChangeFlag()`.
-
-7.  **Reset Change Flag** (In-Memory Specific)
-    *   **Command Struct:** `ResetChangeFlagCommand {}`
-    *   **Handler:** `ResetChangeFlagHandler`
-    *   **Dependencies:** `roomPort.RoomWriter`
-    *   **Steps:** Call `roomRepo.ConsumeChangeFlag()`, return result.
-
-8.  **Add Description**
+6.  **Add Description**
     *   **Command Struct:** `AddDescriptionCommand { Requester sharedEntity.User; Room *roomEntity.Room; DescriptionName string; Text string }`
     *   **Handler:** `AddDescriptionHandler`
     *   **Dependencies:** `roomPort.RoomRepository`
@@ -105,12 +93,6 @@
     *   **Handler:** `GetPlayersInRoomHandler`
     *   **Dependencies:** `roomPort.RoomReader`
     *   **Steps:** Call `roomRepo.GetPlayersInRoom(query.RoomID)`, return result.
-
-5.  **Check Change Flag** (In-Memory Specific)
-    *   **Query Struct:** `CheckChangeFlagQuery {}`
-    *   **Handler:** `CheckChangeFlagHandler`
-    *   **Dependencies:** `roomPort.RoomReader`
-    *   **Steps:** Call `roomRepo.CheckChangeFlag()`, return result.
 
 ## 5.2. Scenario Use Cases (`internal/domain/scenario/usecase/...`)
 
@@ -212,9 +194,3 @@
     *   **Handler:** `GetGamesInRoomHandler`
     *   **Dependencies:** `gamePort.GameReader`
     *   **Steps:** Call `gameRepo.GetGamesInRoom(query.RoomID)`, return result.
-
-5.  **Check Game Change Flag** (In-Memory Specific)
-    *   **Query Struct:** `CheckGameChangeFlagQuery {}`
-    *   **Handler:** `CheckGameChangeFlagHandler`
-    *   **Dependencies:** `gamePort.GameReader`
-    *   **Steps:** Call `gameRepo.CheckGameChangeFlag()`, return result.

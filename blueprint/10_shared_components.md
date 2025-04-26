@@ -71,4 +71,7 @@
         *   `SetAdminUsers(usernames []string)`: Stores admin usernames (package-level variable).
         *   `IsAdmin(username string) bool`: Checks if a username is in the admin list.
         *   `ToUser(sender *telebot.User) *sharedEntity.User`: Converts `telebot.User` to `sharedEntity.User`, checking admin status.
-        *   `SplitCallbackData(data string) (unique string, payload string)`: Parses callback data. 
+        *   `SplitCallbackData(data string) (unique string, payload string)`: Parses callback data.
+    *   **`refresh_state.go`:**
+        *   Defines `RefreshState` struct with mutex, boolean flag (`needsRefresh`), and map (`activeMessages`) to manage dynamic message updates.
+        *   Provides methods like `NewRefreshState`, `RaiseRefreshNeeded`, `ConsumeRefreshNeeded`, `AddActiveMessage`, `RemoveActiveMessage`, `GetAllActiveMessages`. 

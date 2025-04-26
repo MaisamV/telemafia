@@ -27,16 +27,16 @@ func (h *BotHandler) handleCallback(c telebot.Context) error {
 	switch unique {
 	// Room Callbacks - Call functions, passing required handlers
 	case tgutil.UniqueJoinRoom:
-		return room.HandleJoinRoomCallback(h.joinRoomHandler, c, data)
+		return room.HandleJoinRoomCallback(h.joinRoomHandler, h.refreshState, c, data)
 	case tgutil.UniqueDeleteRoomSelectRoom:
 		return room.HandleDeleteRoomSelectCallback(h.getRoomHandler, c, data)
 	case tgutil.UniqueDeleteRoomConfirm:
-		return room.HandleDeleteRoomConfirmCallback(h.deleteRoomHandler, c, data)
+		return room.HandleDeleteRoomConfirmCallback(h.deleteRoomHandler, h.refreshState, c, data)
 	case tgutil.UniqueLeaveRoomSelectRoom:
 		// This callback likely needs access to GetPlayerRoomsQuery
 		return room.HandleLeaveRoomSelectCallback(h.getPlayerRoomsHandler, c, data)
 	case tgutil.UniqueLeaveRoomConfirm:
-		return room.HandleLeaveRoomConfirmCallback(h.leaveRoomHandler, c, data)
+		return room.HandleLeaveRoomConfirmCallback(h.leaveRoomHandler, h.refreshState, c, data)
 
 	// Game Callbacks - Call functions, passing required handlers
 	case tgutil.UniqueConfirmAssignments:

@@ -18,9 +18,6 @@ type RoomReader interface {
 
 	// GetPlayersInRoom Get players in a specific room
 	GetPlayersInRoom(roomID roomEntity.RoomID) ([]*sharedEntity.User, error)
-
-	// CheckChangeFlag checks the current state of the change flag
-	CheckChangeFlag() bool
 }
 
 // RoomWriter defines the interface for writing room data
@@ -39,12 +36,6 @@ type RoomWriter interface {
 
 	// DeleteRoom deletes a room by ID
 	DeleteRoom(roomID roomEntity.RoomID) error
-
-	// ConsumeChangeFlag checks and resets the change flag
-	ConsumeChangeFlag() bool
-
-	// RaiseChangeFlag sets the change flag to true
-	RaiseChangeFlag()
 }
 
 // RoomRepository defines the combined interface for room persistence

@@ -12,8 +12,10 @@ import (
 	"gopkg.in/telebot.v3"
 )
 
+// RefreshNotifier is defined in create_room.go (same package)
+
 // HandleJoinRoom handles the /join_room command (now a function)
-func HandleJoinRoom(joinRoomHandler *roomCommand.JoinRoomHandler, c telebot.Context) error {
+func HandleJoinRoom(joinRoomHandler *roomCommand.JoinRoomHandler, refreshNotifier RefreshNotifier, c telebot.Context) error {
 	roomIDStr := strings.TrimSpace(c.Message().Payload)
 	if roomIDStr == "" {
 		return c.Send("Please provide a room ID: /join_room <room_id>")
@@ -34,6 +36,8 @@ func HandleJoinRoom(joinRoomHandler *roomCommand.JoinRoomHandler, c telebot.Cont
 	if err != nil {
 		return c.Send(fmt.Sprintf("Error joining room '%s': %v", roomID, err))
 	}
+
+	refreshNotifier.RaiseRefreshNeeded()
 
 	markup := &telebot.ReplyMarkup{}
 	btnLeave := markup.Data(fmt.Sprintf("Leave Room %s", roomID), tgutil.UniqueLeaveRoomSelectRoom, string(roomID))

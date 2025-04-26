@@ -18,6 +18,7 @@
 *   **Removed Methods:** `AssignScenarioToRoom`, `GetRoomScenario` implementations should be removed.
 *   **Constructors:** Provide `NewInMemory<Type>Repository()` functions that initialize the maps and mutex and return the *repository port interface type* (e.g., `func NewInMemoryRoomRepository() roomPort.RoomRepository`).
 *   **(Room Repository Specific) Change Flag:** Implement the `CheckChangeFlag`, `ConsumeChangeFlag`, and `RaiseChangeFlag` methods using a boolean flag within the repository struct, also protected by the mutex. This flag should be set to `true` on any write operation and reset by `ConsumeChangeFlag`.
+*   **(REMOVED)** (Room Repository Specific) Change Flag logic has been removed from the repository and moved to `tgutil.RefreshState` managed by the presentation layer.
 *   **Data Copying (Optional but Recommended):** When returning slices or maps from read operations (e.g., `GetRooms`, `GetPlayersInRoom`), consider returning copies to prevent external modification of the internal repository state.
 
 ## 7.2. API Client Adapters (Monolith Implementation) (`internal/adapters/api/`)
@@ -32,6 +33,12 @@
     *   Depends on `scenarioPort.ScenarioReader` (injected).
     *   `FetchScenario` method delegates to `scenarioRepo.GetScenarioByID`.
 *   **Notes:** In a true microservice architecture, these implementations would be replaced with ones using HTTP/gRPC clients to call separate Room and Scenario services.
+*   **Handler Structure:**
+    *   Dispatcher methods on `BotHandler` (e.g., `handleCreateRoom`) map incoming Telegram commands/callbacks.
+    *   These dispatchers call *exported* handler functions (e.g., `room.HandleCreateRoom`, `HandleStart`) located in the respective files (`common_handlers.go`) or sub-packages (`internal/presentation/telegram/handler/[room|game|scenario]/`).
+    *   The exported handler functions receive specific use case handlers and `telebot.Context` as arguments.
+    *   Handlers that modify room state also receive a `RefreshNotifier` argument (satisfied by `*tgutil.RefreshState`) and call `RaiseRefreshNeeded()` on success.
+    *   They utilize functions and constants imported from `internal/shared/tgutil`.
 
 ## 7.3. Telegram Presentation Adapter (`internal/presentation/telegram/handler/`)
 
@@ -90,7 +97,9 @@
     *   Dispatcher methods on `BotHandler` (e.g., `handleCreateRoom`) map incoming Telegram commands/callbacks.
     *   These dispatchers call *exported* handler functions (e.g., `room.HandleCreateRoom`, `HandleStart`) located in the respective files (`common_handlers.go`) or sub-packages (`internal/presentation/telegram/handler/[room|game|scenario]/`).
     *   The exported handler functions receive specific use case handlers and `telebot.Context` as arguments.
+    *   Handlers that modify room state also receive a `RefreshNotifier` argument (satisfied by `*tgutil.RefreshState`) and call `RaiseRefreshNeeded()` on success.
     *   They utilize functions and constants imported from `internal/shared/tgutil`.
 *   **(NEW)** Background Tasks (`refresh.go`):
     *   Contains logic for dynamic message updates (e.g., `RefreshRoomsList`).
+    *   Uses the `RefreshState` manager (held by `BotHandler`) to check if updates are needed (`ConsumeRefreshNeeded()`) and get the list of active messages to update (`GetAllActiveMessages()`).
     *   Initiated via goroutine in `BotHandler.Start()`. 

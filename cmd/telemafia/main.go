@@ -82,13 +82,10 @@ func initializeDependencies(cfg *config.Config) (*telegramHandler.BotHandler, er
 	leaveRoomHandler := roomCommand.NewLeaveRoomHandler(roomRepo, eventPublisher)
 	kickUserHandler := roomCommand.NewKickUserHandler(roomRepo, eventPublisher)
 	deleteRoomHandler := roomCommand.NewDeleteRoomHandler(roomRepo)
-	resetRefreshHandler := roomCommand.NewResetChangeFlagHandler(roomRepo)
-	raiseChangeFlagHandler := roomCommand.NewRaiseChangeFlagHandler(roomRepo)
 	getRoomHandler := roomQuery.NewGetRoomHandler(roomRepo)
 	getRoomsHandler := roomQuery.NewGetRoomsHandler(roomRepo)
 	getPlayerRoomsHandler := roomQuery.NewGetPlayerRoomsHandler(roomRepo)
 	getPlayersInRoomsHandler := roomQuery.NewGetPlayersInRoomHandler(roomRepo)
-	checkRefreshHandler := roomQuery.NewCheckChangeFlagHandler(roomRepo)
 	addDescriptionHandler := roomCommand.NewAddDescriptionHandler(roomRepo)
 
 	// Scenario Use Cases
@@ -115,13 +112,10 @@ func initializeDependencies(cfg *config.Config) (*telegramHandler.BotHandler, er
 		leaveRoomHandler,
 		kickUserHandler,
 		deleteRoomHandler,
-		resetRefreshHandler,    // Corrected name
-		raiseChangeFlagHandler, // Corrected name
 		getRoomsHandler,
 		getPlayerRoomsHandler,
 		getPlayersInRoomsHandler,
 		getRoomHandler,
-		checkRefreshHandler,   // Corrected name
 		addDescriptionHandler, // ADDED in correct position
 		createScenarioHandler,
 		deleteScenarioHandler,

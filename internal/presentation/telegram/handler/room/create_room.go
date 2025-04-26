@@ -13,8 +13,14 @@ import (
 	"gopkg.in/telebot.v3"
 )
 
+// RefreshNotifier defines an interface for triggering a refresh.
+// *tgutil.RefreshState satisfies this interface.
+type RefreshNotifier interface {
+	RaiseRefreshNeeded()
+}
+
 // HandleCreateRoom handles the /create_room command (now a function)
-func HandleCreateRoom(createRoomHandler *roomCommand.CreateRoomHandler, c telebot.Context) error {
+func HandleCreateRoom(createRoomHandler *roomCommand.CreateRoomHandler, refreshNotifier RefreshNotifier, c telebot.Context) error {
 	args := strings.TrimSpace(c.Message().Payload)
 	if args == "" {
 		return c.Send("Please provide a room name: /create_room [name]")
@@ -36,5 +42,6 @@ func HandleCreateRoom(createRoomHandler *roomCommand.CreateRoomHandler, c telebo
 		return c.Send(fmt.Sprintf("Error creating room: %v", err))
 	}
 
+	refreshNotifier.RaiseRefreshNeeded() // Raise flag on success
 	return c.Send(fmt.Sprintf("Room '%s' created successfully! ID: %s", createdRoom.Name, createdRoom.ID))
 }

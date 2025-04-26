@@ -13,6 +13,8 @@ import (
 	"gopkg.in/telebot.v3"
 )
 
+// RefreshNotifier is defined in create_room.go (same package)
+
 // HandleLeaveRoomSelectCallback shows confirmation for leaving a room
 func HandleLeaveRoomSelectCallback(getPlayerRoomsHandler *roomQuery.GetPlayerRoomsHandler, c telebot.Context, data string) error {
 	// The data here could be the roomID if the button includes it
@@ -54,7 +56,7 @@ func HandleLeaveRoomSelectCallback(getPlayerRoomsHandler *roomQuery.GetPlayerRoo
 }
 
 // HandleLeaveRoomConfirmCallback performs the actual leaving action
-func HandleLeaveRoomConfirmCallback(leaveRoomHandler *roomCommand.LeaveRoomHandler, c telebot.Context, data string) error {
+func HandleLeaveRoomConfirmCallback(leaveRoomHandler *roomCommand.LeaveRoomHandler, refreshNotifier RefreshNotifier, c telebot.Context, data string) error {
 	roomID := roomEntity.RoomID(data)
 	requester := tgutil.ToUser(c.Sender())
 	if requester == nil {
@@ -72,6 +74,7 @@ func HandleLeaveRoomConfirmCallback(leaveRoomHandler *roomCommand.LeaveRoomHandl
 		return c.Edit("Failed to leave room.")
 	}
 
+	refreshNotifier.RaiseRefreshNeeded()
 	_ = c.Respond(&telebot.CallbackResponse{Text: "You have left the room."}) // Respond to callback
 	return c.Edit(fmt.Sprintf("You left room %s.", roomID))                   // Edit original message
 }
@@ -96,7 +99,7 @@ func HandleDeleteRoomSelectCallback(getRoomHandler *roomQuery.GetRoomHandler, c 
 }
 
 // HandleDeleteRoomConfirmCallback performs the actual room deletion
-func HandleDeleteRoomConfirmCallback(deleteRoomHandler *roomCommand.DeleteRoomHandler, c telebot.Context, data string) error {
+func HandleDeleteRoomConfirmCallback(deleteRoomHandler *roomCommand.DeleteRoomHandler, refreshNotifier RefreshNotifier, c telebot.Context, data string) error {
 	roomID := roomEntity.RoomID(data)
 	requester := tgutil.ToUser(c.Sender()) // Need requester for admin check within handler
 	if requester == nil {
@@ -114,12 +117,13 @@ func HandleDeleteRoomConfirmCallback(deleteRoomHandler *roomCommand.DeleteRoomHa
 		return c.Edit("Failed to delete room.") // Edit original message
 	}
 
+	refreshNotifier.RaiseRefreshNeeded()
 	_ = c.Respond(&telebot.CallbackResponse{Text: "Room deleted!"})
 	return c.Edit(fmt.Sprintf("Room %s deleted successfully!", roomID))
 }
 
 // HandleJoinRoomCallback handles the inline join button click
-func HandleJoinRoomCallback(joinRoomHandler *roomCommand.JoinRoomHandler, c telebot.Context, data string) error {
+func HandleJoinRoomCallback(joinRoomHandler *roomCommand.JoinRoomHandler, refreshNotifier RefreshNotifier, c telebot.Context, data string) error {
 	roomID := roomEntity.RoomID(data)
 	user := tgutil.ToUser(c.Sender())
 	if user == nil {
@@ -136,6 +140,7 @@ func HandleJoinRoomCallback(joinRoomHandler *roomCommand.JoinRoomHandler, c tele
 		return c.Respond(&telebot.CallbackResponse{Text: fmt.Sprintf("Error joining room: %v", err), ShowAlert: true})
 	}
 
+	refreshNotifier.RaiseRefreshNeeded()
 	// Respond to callback
 	_ = c.Respond(&telebot.CallbackResponse{Text: "Joined successfully!"})
 

@@ -38,14 +38,13 @@
 │   │   │       │   ├── leave_room.go
 │   │   │       │   ├── kick_user.go
 │   │   │       │   ├── delete_room.go
-│   │   │       │   ├── raise_change_flag.go  # (In-Memory Specific)
-│   │   │       │   └── reset_change_flag.go  # (In-Memory Specific)
-│   │   │       └── query/   # Queries (data retrieval operations)
-│   │   │           ├── get_room.go
-│   │   │           ├── get_rooms.go
-│   │   │           ├── get_player_rooms.go
-│   │   │           ├── get_players_in_room.go
-│   │   │           └── flag_query.go         # (In-Memory Specific)
+│   │   │       │   ├── add_description.go # NEW: Use case for adding description
+│   │   │       │   └── query/   # Queries (data retrieval operations)
+│   │   │       │   ├── get_room.go
+│   │   │       │   ├── get_rooms.go
+│   │   │       │   ├── get_player_rooms.go
+│   │   │       │   └── flag_query.go         # (In-Memory Specific)
+│   │   │       └── get_players_in_room.go
 │   │   ├── scenario/     # Scenario Domain Module
 │   │   │   ├── entity/
 │   │   │   │   └── scenario.go # Defines Scenario and Role

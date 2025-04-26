@@ -28,21 +28,28 @@ import (
 
 // BotHandler holds dependencies and handles Telegram bot setup
 type BotHandler struct {
-	bot                     *telebot.Bot
-	adminUsernames          []string
+	bot            *telebot.Bot
+	adminUsernames []string
+
+	// Refresh state management (delegated)
+	refreshState *tgutil.RefreshState
+
+	// // Refresh state (moved from repository) - REMOVED
+	// refreshMutex            sync.RWMutex
+	// needsRefresh            bool
+	// activeRefreshMessages   map[int64]*telebot.Message // Map ChatID to the message being refreshed
+
+	// Use Case Handlers
 	roomRepo                roomPort.RoomWriter                    // Use roomPort
 	createRoomHandler       *roomCommand.CreateRoomHandler         // Use roomCommand
 	joinRoomHandler         *roomCommand.JoinRoomHandler           // Use roomCommand
 	leaveRoomHandler        *roomCommand.LeaveRoomHandler          // Use roomCommand
 	kickUserHandler         *roomCommand.KickUserHandler           // Use roomCommand
 	deleteRoomHandler       *roomCommand.DeleteRoomHandler         // Use roomCommand
-	resetRefreshHandler     *roomCommand.ResetChangeFlagHandler    // Use roomCommand
-	raiseChangeFlagHandler  *roomCommand.RaiseChangeFlagHandler    // Use roomCommand
 	getRoomsHandler         *roomQuery.GetRoomsHandler             // Use roomQuery
 	getPlayerRoomsHandler   *roomQuery.GetPlayerRoomsHandler       // Use roomQuery
 	getPlayersInRoomHandler *roomQuery.GetPlayersInRoomHandler     // Use roomQuery
 	getRoomHandler          *roomQuery.GetRoomHandler              // Use roomQuery
-	checkRefreshHandler     *roomQuery.CheckChangeFlagHandler      // Use roomQuery
 	addDescriptionHandler   *roomCommand.AddDescriptionHandler     // Add handler field
 	createScenarioHandler   *scenarioCommand.CreateScenarioHandler // Use scenarioCommand
 	deleteScenarioHandler   *scenarioCommand.DeleteScenarioHandler // Use scenarioCommand
@@ -65,13 +72,10 @@ func NewBotHandler(
 	leaveRoomHandler *roomCommand.LeaveRoomHandler, // Use roomCommand
 	kickUserHandler *roomCommand.KickUserHandler, // Use roomCommand
 	deleteRoomHandler *roomCommand.DeleteRoomHandler, // Use roomCommand
-	resetRefreshHandler *roomCommand.ResetChangeFlagHandler, // Use roomCommand
-	raiseChangeFlagHandler *roomCommand.RaiseChangeFlagHandler, // Use roomCommand
 	getRoomsHandler *roomQuery.GetRoomsHandler, // Use roomQuery
 	getPlayerRoomsHandler *roomQuery.GetPlayerRoomsHandler, // Use roomQuery
 	getPlayersInRoomHandler *roomQuery.GetPlayersInRoomHandler, // Use roomQuery
 	getRoomHandler *roomQuery.GetRoomHandler, // Use roomQuery
-	checkRefreshHandler *roomQuery.CheckChangeFlagHandler, // Use roomQuery
 	addDescriptionHandler *roomCommand.AddDescriptionHandler, // Add handler param
 	createScenarioHandler *scenarioCommand.CreateScenarioHandler, // Use scenarioCommand
 	deleteScenarioHandler *scenarioCommand.DeleteScenarioHandler, // Use scenarioCommand
@@ -86,22 +90,20 @@ func NewBotHandler(
 	// Set admin users for util package (now moved)
 	tgutil.SetAdminUsers(adminUsernames) // Use tgutil
 
-	return &BotHandler{
+	h := &BotHandler{
 		bot:                     bot,
 		adminUsernames:          adminUsernames,
+		refreshState:            tgutil.NewRefreshState(), // Initialize RefreshState
 		roomRepo:                roomRepo,
 		createRoomHandler:       createRoomHandler,
 		joinRoomHandler:         joinRoomHandler,
 		leaveRoomHandler:        leaveRoomHandler,
 		kickUserHandler:         kickUserHandler,
 		deleteRoomHandler:       deleteRoomHandler,
-		resetRefreshHandler:     resetRefreshHandler,
-		raiseChangeFlagHandler:  raiseChangeFlagHandler,
 		getRoomsHandler:         getRoomsHandler,
 		getPlayerRoomsHandler:   getPlayerRoomsHandler,
 		getPlayersInRoomHandler: getPlayersInRoomHandler,
 		getRoomHandler:          getRoomHandler,
-		checkRefreshHandler:     checkRefreshHandler,
 		addDescriptionHandler:   addDescriptionHandler, // Assign handler
 		createScenarioHandler:   createScenarioHandler,
 		deleteScenarioHandler:   deleteScenarioHandler,
@@ -113,6 +115,7 @@ func NewBotHandler(
 		getGamesHandler:         getGamesHandler,
 		getGameByIDHandler:      getGameByIDHandler,
 	}
+	return h
 }
 
 // Start initializes background tasks and starts the bot polling
@@ -172,15 +175,15 @@ func (h *BotHandler) handleHelp(c telebot.Context) error {
 
 // --- Room ---
 func (h *BotHandler) handleCreateRoom(c telebot.Context) error {
-	return room.HandleCreateRoom(h.createRoomHandler, c)
+	return room.HandleCreateRoom(h.createRoomHandler, h.refreshState, c)
 }
 
 func (h *BotHandler) handleJoinRoom(c telebot.Context) error {
-	return room.HandleJoinRoom(h.joinRoomHandler, c)
+	return room.HandleJoinRoom(h.joinRoomHandler, h.refreshState, c)
 }
 
 func (h *BotHandler) handleLeaveRoom(c telebot.Context) error {
-	return room.HandleLeaveRoom(h.leaveRoomHandler, c)
+	return room.HandleLeaveRoom(h.leaveRoomHandler, h.refreshState, c)
 }
 
 func (h *BotHandler) handleListRooms(c telebot.Context) error {
@@ -192,11 +195,12 @@ func (h *BotHandler) handleMyRooms(c telebot.Context) error {
 }
 
 func (h *BotHandler) handleKickUser(c telebot.Context) error {
-	return room.HandleKickUser(h.kickUserHandler, c)
+	return room.HandleKickUser(h.kickUserHandler, h.refreshState, c)
 }
 
 func (h *BotHandler) handleDeleteRoom(c telebot.Context) error {
-	return room.HandleDeleteRoom(h.getRoomsHandler, c) // Pass delete handler too
+	// Showing the list doesn't need the notifier, but the confirm callback will.
+	return room.HandleDeleteRoom(h.getRoomsHandler, c)
 }
 
 // --- Scenario ---

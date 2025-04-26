@@ -18,9 +18,6 @@ type RoomReader interface {
 	GetRooms() ([]*roomEntity.Room, error)
 	GetPlayerRooms(playerID sharedEntity.UserID) ([]*roomEntity.Room, error)
 	GetPlayersInRoom(roomID roomEntity.RoomID) ([]*sharedEntity.User, error)
-
-	// CheckChangeFlag checks the current state of the change flag (specific to in-memory refresh logic)
-	CheckChangeFlag() bool
 }
 
 // RoomWriter defines the interface for writing room data
@@ -30,11 +27,6 @@ type RoomWriter interface {
 	AddPlayerToRoom(roomID roomEntity.RoomID, player *sharedEntity.User) error
 	RemovePlayerFromRoom(roomID roomEntity.RoomID, playerID sharedEntity.UserID) error
 	DeleteRoom(roomID roomEntity.RoomID) error
-
-	// ConsumeChangeFlag checks and resets the change flag (specific to in-memory refresh logic)
-	ConsumeChangeFlag() bool
-	// RaiseChangeFlag sets the change flag to true (specific to in-memory refresh logic)
-	RaiseChangeFlag()
 }
 
 // RoomRepository defines the combined interface for room persistence
@@ -42,11 +34,10 @@ type RoomRepository interface {
 	RoomReader
 	RoomWriter
 }
-```
 
 **Notes:**
 
-*   The `CheckChangeFlag`, `ConsumeChangeFlag`, and `RaiseChangeFlag` methods are specific to the current in-memory implementation's refresh mechanism. They might be removed or refactored if persistence changes.
+*   The `CheckChangeFlag`, `ConsumeChangeFlag`, and `RaiseChangeFlag` methods have been **removed**. This state management is now handled within the presentation layer using `tgutil.RefreshState`.
 *   `AssignScenarioToRoom` and `GetRoomScenario` methods have been removed. Room state changes (like setting `ScenarioName` or adding `Description`) should be done on the `Room` entity itself, and then persisted using the `UpdateRoom` method.
 *   The repository should handle potential errors like `ErrRoomNotFound`, `ErrRoomAlreadyExists`, `ErrPlayerNotInRoom` as defined in the Room entity package.
 

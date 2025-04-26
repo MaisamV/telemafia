@@ -14,8 +14,10 @@ import (
 	"gopkg.in/telebot.v3"
 )
 
+// RefreshNotifier is defined in create_room.go (same package)
+
 // HandleKickUser handles the /kick_user command (now a function)
-func HandleKickUser(kickUserHandler *roomCommand.KickUserHandler, c telebot.Context) error {
+func HandleKickUser(kickUserHandler *roomCommand.KickUserHandler, refreshNotifier RefreshNotifier, c telebot.Context) error {
 	parts := strings.Fields(c.Message().Payload)
 	if len(parts) != 2 {
 		return c.Send("Usage: /kick_user <room_id> <user_id>")
@@ -44,5 +46,6 @@ func HandleKickUser(kickUserHandler *roomCommand.KickUserHandler, c telebot.Cont
 		return c.Send(fmt.Sprintf("Error kicking user %d from room %s: %v", playerID, roomID, err))
 	}
 
+	refreshNotifier.RaiseRefreshNeeded()
 	return c.Send(fmt.Sprintf("User %d kicked from room %s", playerID, roomID))
 }

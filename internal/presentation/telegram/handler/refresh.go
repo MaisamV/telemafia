@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	"sync"
 	"telemafia/internal/shared/tgutil"
 	"time"
 
-	roomCommand "telemafia/internal/domain/room/usecase/command"
 	roomQuery "telemafia/internal/domain/room/usecase/query"
 
 	"gopkg.in/telebot.v3"
@@ -32,44 +30,37 @@ type TrackedMessage struct {
 	Data        string // e.g., room ID for RoomDetail
 }
 
-var (
-	refreshingMessages      = make(map[int64]TrackedMessage)
-	refreshingMessagesMutex sync.RWMutex
-)
-
 // RefreshRoomsList handles updating dynamic messages.
-// It periodically checks a flag (set by commands that modify rooms)
-// and updates all registered messages if changes occurred.
+// It periodically checks the RefreshState and updates all active messages if changes occurred.
 func (h *BotHandler) RefreshRoomsList() {
 	updateMessages := func() {
-		refreshingMessagesMutex.RLock()
-		messagesToUpdate := make(map[int64]TrackedMessage)
-		for userID, trackedMsg := range refreshingMessages {
-			messagesToUpdate[userID] = trackedMsg
-		}
-		refreshingMessagesMutex.RUnlock()
+		// Get a clone of the active messages map from RefreshState
+		messagesToUpdate := h.refreshState.GetAllActiveMessages()
 
 		if len(messagesToUpdate) == 0 {
 			return
 		}
 
 		log.Printf("Refreshing %d messages...", len(messagesToUpdate))
-		for userID, trackedMsg := range messagesToUpdate {
-			newContent, newMarkup, err := h.prepareMessageContent(trackedMsg.MessageType, trackedMsg.Data)
+		for chatID, msg := range messagesToUpdate {
+			// TODO: Refactor prepareMessageContent to not depend on h or pass necessary parts
+			// For now, we assume it needs getRoomsHandler and getPlayersInRoomHandler
+			newContent, newMarkup, err := h.prepareListRoomsMessage() // Assuming only ListRooms for now
 			if err != nil {
-				log.Printf("Error preparing refresh content for user %d (type %v, data %s): %v", userID, trackedMsg.MessageType, trackedMsg.Data, err)
+				log.Printf("Error preparing refresh content for chat %d: %v", chatID, err)
 				continue
 			}
 
-			_, editErr := h.bot.Edit(trackedMsg.Msg, newContent, newMarkup)
+			_, editErr := h.bot.Edit(msg, newContent, newMarkup)
 			if editErr != nil {
 				if strings.Contains(editErr.Error(), "message to edit not found") ||
 					strings.Contains(editErr.Error(), "message is not modified") ||
 					strings.Contains(editErr.Error(), "bot was blocked by the user") {
-					log.Printf("Removing message for user %d from refresh list (edit failed: %v)", userID, editErr)
-					RemoveRefreshingChat(userID)
+					log.Printf("Removing message for chat %d from refresh list (edit failed: %v)", chatID, editErr)
+					// Use RefreshState method to remove
+					h.refreshState.RemoveActiveMessage(chatID)
 				} else {
-					log.Printf("Non-fatal error editing message for user %d: %v", userID, editErr)
+					log.Printf("Non-fatal error editing message for chat %d: %v", chatID, editErr)
 				}
 			}
 		}
@@ -79,8 +70,8 @@ func (h *BotHandler) RefreshRoomsList() {
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 	for range ticker.C {
-		if h.checkRefreshHandler.Handle(context.Background(), roomQuery.CheckChangeFlagQuery{}) {
-			h.resetRefreshHandler.Handle(context.Background(), roomCommand.ResetChangeFlagCommand{})
+		// Use RefreshState method to check and consume the flag
+		if h.refreshState.ConsumeRefreshNeeded() {
 			updateMessages()
 		}
 	}
@@ -127,8 +118,10 @@ func (h *BotHandler) prepareListRoomsMessage() (string, *telebot.ReplyMarkup, er
 }
 
 // SendOrUpdateRefreshingMessage sends a new message and registers it for refreshing, or updates an existing one.
+// This now uses the RefreshState manager.
 func (h *BotHandler) SendOrUpdateRefreshingMessage(userID int64, messageType RefreshingMessageType, data string) error {
-	content, markup, err := h.prepareMessageContent(messageType, data)
+	// TODO: Refactor prepareMessageContent call
+	content, markup, err := h.prepareListRoomsMessage() // Assuming ListRooms for now
 	if err != nil {
 		log.Printf("Error preparing content for user %d type %v: %v", userID, messageType, err)
 		_, sendErr := h.bot.Send(telebot.ChatID(userID), "Error preparing dynamic message content.")
@@ -138,74 +131,35 @@ func (h *BotHandler) SendOrUpdateRefreshingMessage(userID int64, messageType Ref
 		return err
 	}
 
-	refreshingMessagesMutex.Lock()
-	defer refreshingMessagesMutex.Unlock()
-
-	if existingTrackedMsg, ok := refreshingMessages[userID]; ok {
-		updatedMsg, editErr := h.bot.Edit(existingTrackedMsg.Msg, content, markup)
+	// Check if we already have an active message for this user
+	if existingMsg, ok := h.refreshState.GetActiveMessage(userID); ok {
+		updatedMsg, editErr := h.bot.Edit(existingMsg, content, markup)
 		if editErr == nil {
-			refreshingMessages[userID] = TrackedMessage{
-				Msg:         updatedMsg,
-				MessageType: messageType,
-				Data:        data,
-			}
+			// Update the message pointer in RefreshState
+			h.refreshState.AddActiveMessage(userID, updatedMsg)
 			log.Printf("Successfully updated refreshing message for user %d", userID)
 			return nil
 		}
-		log.Printf("Failed to edit refreshing message %d for user %d, sending new: %v", existingTrackedMsg.Msg.ID, userID, editErr)
-		delete(refreshingMessages, userID)
+		log.Printf("Failed to edit refreshing message %d for user %d, sending new: %v", existingMsg.ID, userID, editErr)
+		// Remove the old one before sending a new one
+		h.refreshState.RemoveActiveMessage(userID)
 	}
 
+	// Send a new message
 	msg, sendErr := h.bot.Send(telebot.ChatID(userID), content, markup)
 	if sendErr != nil {
 		log.Printf("Error sending new refreshing message to user %d: %v", userID, sendErr)
 		return sendErr
 	}
 
-	refreshingMessages[userID] = TrackedMessage{
-		Msg:         msg,
-		MessageType: messageType,
-		Data:        data,
-	}
+	// Add the new message to RefreshState
+	h.refreshState.AddActiveMessage(userID, msg)
 	log.Printf("Sent and registered new refreshing message %d for user %d", msg.ID, userID)
 	return nil
 }
 
-// ChangeRefreshType updates the type of message being refreshed for a user.
-func ChangeRefreshType(userID int64, messageType RefreshingMessageType, data string) {
-	refreshingMessagesMutex.Lock()
-	defer refreshingMessagesMutex.Unlock()
-	if trackedMsg, exists := refreshingMessages[userID]; exists {
-		trackedMsg.MessageType = messageType
-		trackedMsg.Data = data
-		refreshingMessages[userID] = trackedMsg
-		log.Printf("Changed refresh type for user %d to %v (data: %s)", userID, messageType, data)
-	} else {
-		log.Printf("Attempted to change refresh type for user %d, but no existing message found.", userID)
-	}
-}
-
-// GetRefreshingChats returns a snapshot of the chats being refreshed.
-// The returned slice contains copies, safe for concurrent reading.
-type RefreshingChat struct {
-	userID  int64
-	message TrackedMessage
-}
-
-func GetRefreshingChats() []RefreshingChat {
-	refreshingMessagesMutex.RLock()
-	defer refreshingMessagesMutex.RUnlock()
-	userMessages := make([]RefreshingChat, 0, len(refreshingMessages))
-	for userID, trackedMsg := range refreshingMessages {
-		userMessages = append(userMessages, RefreshingChat{userID: userID, message: trackedMsg})
-	}
-	return userMessages
-}
-
-// RemoveRefreshingChat removes a chat from the refreshing list.
-func RemoveRefreshingChat(userID int64) {
-	refreshingMessagesMutex.Lock()
-	defer refreshingMessagesMutex.Unlock()
-	delete(refreshingMessages, userID)
+// RemoveRefreshingChat removes a chat from the refreshing list via RefreshState.
+func (h *BotHandler) RemoveRefreshingChat(userID int64) {
+	h.refreshState.RemoveActiveMessage(userID)
 	log.Printf("Removed user %d from refreshing messages list.", userID)
 }
