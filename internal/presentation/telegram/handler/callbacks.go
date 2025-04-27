@@ -1,10 +1,12 @@
 package telegram
 
 import (
+	"fmt"
 	"log"
 	game "telemafia/internal/presentation/telegram/handler/game"
 	room "telemafia/internal/presentation/telegram/handler/room"
 
+	// Import messages
 	tgutil "telemafia/internal/shared/tgutil"
 
 	"gopkg.in/telebot.v3"
@@ -15,6 +17,7 @@ import (
 func (h *BotHandler) handleCallback(c telebot.Context) error {
 	callback := c.Callback()
 	if callback == nil {
+		// This shouldn't happen for telebot.OnCallback, maybe log differently
 		log.Println("Received update that is not a callback")
 		return nil
 	}
@@ -25,34 +28,33 @@ func (h *BotHandler) handleCallback(c telebot.Context) error {
 	log.Printf("Callback received: User=%d, Unique=%s, Data=%s", userID, unique, data)
 
 	switch unique {
-	// Room Callbacks - Call functions, passing required handlers
+	// Room Callbacks - Pass messages struct
 	case tgutil.UniqueJoinRoom:
-		return room.HandleJoinRoomCallback(h.joinRoomHandler, h.refreshState, c, data)
+		return room.HandleJoinRoomCallback(h.joinRoomHandler, h.getRoomsHandler, h.getPlayersInRoomHandler, h.roomListRefreshMessage, h.roomDetailRefreshMessage, c, data, h.msgs)
 	case tgutil.UniqueDeleteRoomSelectRoom:
-		return room.HandleDeleteRoomSelectCallback(h.getRoomHandler, c, data)
+		return room.HandleDeleteRoomSelectCallback(h.getRoomHandler, c, data, h.msgs)
 	case tgutil.UniqueDeleteRoomConfirm:
-		return room.HandleDeleteRoomConfirmCallback(h.deleteRoomHandler, h.refreshState, c, data)
+		return room.HandleDeleteRoomConfirmCallback(h.deleteRoomHandler, h.roomListRefreshMessage, c, data, h.msgs)
 	case tgutil.UniqueLeaveRoomSelectRoom:
-		// This callback likely needs access to GetPlayerRoomsQuery
-		return room.HandleLeaveRoomSelectCallback(h.getPlayerRoomsHandler, c, data)
+		return room.HandleLeaveRoomSelectCallback(h.leaveRoomHandler, h.getRoomsHandler, h.getPlayersInRoomHandler, h.roomListRefreshMessage, h.roomDetailRefreshMessage, c, data, h.msgs)
 	case tgutil.UniqueLeaveRoomConfirm:
-		return room.HandleLeaveRoomConfirmCallback(h.leaveRoomHandler, h.refreshState, c, data)
+		return room.HandleLeaveRoomConfirmCallback(h.leaveRoomHandler, h.roomListRefreshMessage, c, data, h.msgs)
 
-	// Game Callbacks - Call functions, passing required handlers
+	// Game Callbacks - Pass messages struct
 	case tgutil.UniqueConfirmAssignments:
-		return game.HandleConfirmAssignments(h.getGameByIDHandler, c, data)
+		return game.HandleConfirmAssignments(h.getGameByIDHandler, c, data, h.msgs)
 	// case UniqueShowMyRole:
 	// 	 return handleShowMyRoleCallback(h, c, data) // Implement if needed
 
 	// General Callbacks
 	case tgutil.UniqueCancel:
-		log.Printf("User %d cancelled operation.", userID)
-		_ = c.Respond(&telebot.CallbackResponse{Text: "Operation cancelled."})
-		_ = c.Delete()
-		return nil
+		// Use msg
+		_ = c.Respond(&telebot.CallbackResponse{Text: h.msgs.Common.CallbackCancelled})
+		return c.Delete()
 
 	default:
 		log.Printf("Unknown callback unique identifier: %s", unique)
-		return c.Respond(&telebot.CallbackResponse{Text: "Unknown action."})
+		// Use msg
+		return c.Respond(&telebot.CallbackResponse{Text: fmt.Sprintf("Unknown action: %s", unique), ShowAlert: true})
 	}
 }

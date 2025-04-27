@@ -3,65 +3,61 @@ package telegram
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 
 	gameQuery "telemafia/internal/domain/game/usecase/query"
+	messages "telemafia/internal/presentation/telegram/messages"
 	tgutil "telemafia/internal/shared/tgutil"
 
 	"gopkg.in/telebot.v3"
 )
 
-// HandleGamesList handles the /games command (now a function)
-func HandleGamesList(getGamesHandler *gameQuery.GetGamesHandler, c telebot.Context) error {
+// HandleGamesList handles the /games command
+func HandleGamesList(
+	getGamesHandler *gameQuery.GetGamesHandler,
+	c telebot.Context,
+	msgs *messages.Messages,
+) error {
 	requester := tgutil.ToUser(c.Sender())
-	if requester == nil {
-		return c.Send("Could not identify requester.")
-	}
-
-	// Admin check remains here for now, as it's a query displaying potentially sensitive info
-	if !tgutil.IsAdmin(c.Sender().Username) {
-		return c.Send("You are not authorized to use this command.")
+	if requester == nil || !requester.Admin {
+		return c.Send(msgs.Common.ErrorPermissionDenied)
 	}
 
 	query := gameQuery.GetGamesQuery{}
 	games, err := getGamesHandler.Handle(context.Background(), query)
 	if err != nil {
-		log.Printf("Error fetching games list: %v", err)
-		return c.Send(fmt.Sprintf("Error fetching games list: %v", err))
+		return c.Send(fmt.Sprintf(msgs.Game.ListGamesError, err))
 	}
 
 	if len(games) == 0 {
-		return c.Send("No active games found.")
+		return c.Send(msgs.Game.ListGamesNoGames)
 	}
 
 	var response strings.Builder
-	response.WriteString("Active Games:\n")
+	response.WriteString(msgs.Game.ListGamesTitle)
 	for _, game := range games {
-		roomName := "<Unknown>"
+		roomName := "<unknown>"
+		roomID := "<unknown>"
 		if game.Room != nil {
 			roomName = game.Room.Name
+			roomID = string(game.Room.ID)
 		}
-		scenarioName := "<Unknown>"
+		scenarioName := "<unknown>"
+		scenarioID := "<unknown>"
 		if game.Scenario != nil {
 			scenarioName = game.Scenario.Name
+			scenarioID = game.Scenario.ID
 		}
-		response.WriteString(fmt.Sprintf("- GameID: `%s`\n  Room: %s (`%s`)\n  Scenario: %s (`%s`)\n  State: `%s`\n  Players/Assignments: %d\n",
-			game.ID, roomName, game.Room.ID, scenarioName, game.Scenario.ID, game.State, len(game.Assignments)))
-
-		// // Optionally, fetch and display assignments (might be too verbose)
-		// if len(game.Assignments) > 0 {
-		// 	response.WriteString("  Assignments:\n")
-		// 	for userID, role := range game.Assignments {
-		// 		// Need a way to get username from userID - this requires another query/lookup
-		// 		// For now, just showing ID
-		// 		response.WriteString(fmt.Sprintf("    %d: %s\n", userID, role.Name))
-		// 	}
-		// }
-		response.WriteString("\n") // Add a newline between games
+		playerCount := len(game.Assignments)
+		if playerCount == 0 && game.Room != nil {
+			playerCount = len(game.Room.Players)
+		}
+		response.WriteString(fmt.Sprintf(msgs.Game.ListGamesEntry,
+			game.ID, roomName, roomID, scenarioName, scenarioID, game.State, playerCount,
+		))
 	}
 
-	return c.Send(response.String(), &telebot.SendOptions{ParseMode: telebot.ModeMarkdown})
+	return c.Send(response.String())
 }
 
 // formatAssignments removed - moved to util.go as method on BotHandler

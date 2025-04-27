@@ -118,22 +118,14 @@ func (r *InMemoryRoomRepository) RemovePlayerFromRoom(roomID roomEntity.RoomID, 
 		return roomEntity.ErrRoomNotFound
 	}
 
-	found := false
 	newPlayers := make([]*sharedEntity.User, 0, len(room.Players))
 	for _, p := range room.Players {
-		if p != nil && p.ID == playerID { // Add nil check
-			found = true
-		} else {
+		if p == nil || p.ID != playerID { // Add nil check
 			newPlayers = append(newPlayers, p)
 		}
 	}
 
-	if !found {
-		return roomEntity.ErrPlayerNotInRoom // Use error from entity package
-	}
-
 	room.Players = newPlayers
-	// r.changeFlag = true // REMOVED
 	return nil
 }
 

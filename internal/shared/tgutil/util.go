@@ -10,6 +10,20 @@ import (
 
 var adminUsernames []string
 
+// --- Refresh Logic (potentially move to its own package/file later) ---
+
+// RefreshingMessageType defines the type of content being refreshed.
+type RefreshingMessageType int
+
+const (
+	ListRooms  RefreshingMessageType = iota
+	RoomDetail                       // Placeholder for potential future use
+)
+
+type Updater interface {
+	SendOrUpdateRefreshingMessage(int64, RefreshingMessageType, string) error
+}
+
 // SetAdminUsers stores the list of admin usernames.
 // NOTE: This uses a package-level variable, which isn't ideal for testing.
 // Consider injecting a config or admin checker service instead in a real app.
@@ -49,10 +63,10 @@ func ToUser(sender *telebot.User) *sharedEntity.User {
 // SplitCallbackData extracts the unique identifier and payload from callback data.
 // Assumes format "unique:payload" or just "unique".
 func SplitCallbackData(data string) (unique string, payload string) {
-	parts := strings.SplitN(data, ":", 2)
-	unique = parts[0]
-	if len(parts) > 1 {
-		payload = parts[1]
+	parts := strings.SplitN(data, "|", 2)
+	unique = strings.TrimSpace(parts[0])
+	if len(parts) == 2 {
+		payload = strings.TrimSpace(parts[1])
 	}
 	return
 }

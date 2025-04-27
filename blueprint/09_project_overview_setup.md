@@ -19,45 +19,24 @@
 
 The primary external dependency is:
 
-*   `gopkg.in/telebot.v3`: Framework for interacting with the Telegram Bot API.
+*   `gopkg.in/telebot.v3` (or compatible version): Framework for interacting with the Telegram Bot API.
 
 *(The `go.mod` file will also include indirect dependencies pulled in by `telebot`)*
 
 Example `go.mod` content:
 
-```go
-module telemafia
-
-go 1.22 // Specify target Go version (e.g., 1.22 or higher)
-
-require gopkg.in/telebot.v3 v3.3.8 // Or latest compatible version
-
-// Indirect dependencies will be added automatically by Go tooling
-```
+*   The Go module definition file (`go.mod`) **MUST** specify a compatible Go version (e.g., 1.18 or higher) and require a compatible version of `gopkg.in/telebot.v3`.
 
 ## 9.4. Running the Bot
 
 1.  **Navigate:** Open a terminal in the project's root directory.
-2.  **Build & Run (Recommended):**
-    ```bash
-    go build -o telemafia_bot ./cmd/telemafia/
-    ./telemafia_bot -token "YOUR_TOKEN" -admins "admin1,admin2"
-    ```
-3.  **Run Directly:**
-    ```bash
-    go run ./cmd/telemafia/main.go -token "YOUR_TOKEN" -admins "admin1,admin2"
-    ```
-4.  **Using `config.json`:**
-    *   Create a `config.json` file in the root directory (see Configuration Specification for structure).
-    *   Run without flags:
-        ```bash
-        # Using built binary
-        ./telemafia_bot
-        # Or running directly
-        go run ./cmd/telemafia/main.go
-        ```
+2.  **Build:** Compile the application using `go build -o <output_name> ./cmd/telemafia/`.
+3.  **Run:** Execute the compiled binary.
+    *   **Using Flags:** Provide configuration via flags: `./<output_name> -token "YOUR_TOKEN" -admins "admin1,admin2"`.
+    *   **Using `config.json`:** Create `config.json` (see Configuration Spec) and `messages.json` (or ensure it exists) in the same directory as the executable and run `./<output_name>` without flags.
+4.  **Run Directly (Development):** Use `go run ./cmd/telemafia/main.go` with the same flag/`config.json` options. Ensure `messages.json` exists in the project root.
 
-*Replace `YOUR_TOKEN` and `admin1,admin2` with actual values.*
+*Replace placeholders like `<output_name>`, `YOUR_TOKEN`, and `admin1,admin2` with actual values.*
 
 ## 9.5. Basic `README.md` Content
 

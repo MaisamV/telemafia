@@ -8,27 +8,27 @@ import (
 
 	roomEntity "telemafia/internal/domain/room/entity"
 	roomCommand "telemafia/internal/domain/room/usecase/command"
+	messages "telemafia/internal/presentation/telegram/messages"
 	tgutil "telemafia/internal/shared/tgutil"
 
 	"gopkg.in/telebot.v3"
 )
 
-// RefreshNotifier defines an interface for triggering a refresh.
-// *tgutil.RefreshState satisfies this interface.
-type RefreshNotifier interface {
-	RaiseRefreshNeeded()
-}
-
 // HandleCreateRoom handles the /create_room command (now a function)
-func HandleCreateRoom(createRoomHandler *roomCommand.CreateRoomHandler, refreshNotifier RefreshNotifier, c telebot.Context) error {
+func HandleCreateRoom(
+	createRoomHandler *roomCommand.CreateRoomHandler,
+	refreshNotifier RefreshNotifier,
+	c telebot.Context,
+	msgs *messages.Messages,
+) error {
 	args := strings.TrimSpace(c.Message().Payload)
 	if args == "" {
-		return c.Send("Please provide a room name: /create_room [name]")
+		return c.Send(msgs.Room.CreatePrompt)
 	}
 
 	user := tgutil.ToUser(c.Sender())
 	if user == nil {
-		return c.Send("Could not identify user.")
+		return c.Send(msgs.Common.ErrorIdentifyUser)
 	}
 
 	cmd := roomCommand.CreateRoomCommand{
@@ -39,9 +39,9 @@ func HandleCreateRoom(createRoomHandler *roomCommand.CreateRoomHandler, refreshN
 
 	createdRoom, err := createRoomHandler.Handle(context.Background(), cmd)
 	if err != nil {
-		return c.Send(fmt.Sprintf("Error creating room: %v", err))
+		return c.Send(fmt.Sprintf(msgs.Room.CreateError, err))
 	}
 
 	refreshNotifier.RaiseRefreshNeeded() // Raise flag on success
-	return c.Send(fmt.Sprintf("Room '%s' created successfully! ID: %s", createdRoom.Name, createdRoom.ID))
+	return c.Send(fmt.Sprintf(msgs.Room.CreateSuccess, createdRoom.Name, createdRoom.ID))
 }

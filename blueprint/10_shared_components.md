@@ -71,7 +71,26 @@
         *   `SetAdminUsers(usernames []string)`: Stores admin usernames (package-level variable).
         *   `IsAdmin(username string) bool`: Checks if a username is in the admin list.
         *   `ToUser(sender *telebot.User) *sharedEntity.User`: Converts `telebot.User` to `sharedEntity.User`, checking admin status.
-        *   `SplitCallbackData(data string) (unique string, payload string)`: Parses callback data.
-    *   **`refresh_state.go`:**
-        *   Defines `RefreshState` struct with mutex, boolean flag (`needsRefresh`), and map (`activeMessages`) to manage dynamic message updates.
-        *   Provides methods like `NewRefreshState`, `RaiseRefreshNeeded`, `ConsumeRefreshNeeded`, `AddActiveMessage`, `RemoveActiveMessage`, `GetAllActiveMessages`. 
+        *   `SplitCallbackData(data string) (unique string, payload string)`: Parses callback data (uses `|` as separator, e.g., `"unique|payload"`).
+*   **`refresh_state.go`:**
+    *   **(NEW) `RefreshingMessageBook` Struct**
+        *   **Purpose:** Manages the state for dynamic message updates, replacing the simpler `changeFlag` concept.
+        *   **Thread Safety:** Uses `sync.RWMutex` for concurrent access.
+        *   **Fields:**
+            *   `mutex` (`sync.RWMutex`)
+            *   `needsRefresh` (`bool`): General flag indicating *some* message might need an update.
+            *   `activeMessages` (`map[int64]*RefreshingMessage`): Maps Chat ID to `RefreshingMessage` struct (which contains the `*telebot.Message` and optional `Data` string).
+    *   **(NEW) `RefreshingMessage` Struct**
+        *   **Purpose:** Holds the actual `*telebot.Message` to be refreshed and any associated data (like a Room ID).
+        *   **Fields:**
+            *   `Msg` (`*telebot.Message`)
+            *   `Data` (`string`)
+    *   **(NEW) `NewRefreshState()` Function**
+        *   **Purpose:** Constructor for `RefreshingMessageBook`.
+    *   **(NEW) Methods on `*RefreshingMessageBook`:**
+        *   `RaiseRefreshNeeded()`: Sets `needsRefresh` to true.
+        *   `ConsumeRefreshNeeded()`: Returns `needsRefresh` and sets it to false.
+        *   `AddActiveMessage(chatID int64, msg *RefreshingMessage)`: Adds/updates a message in `activeMessages`.
+        *   `RemoveActiveMessage(chatID int64)`: Removes a message from `activeMessages`.
+        *   `GetActiveMessage(chatID int64) (*RefreshingMessage, bool)`: Retrieves a message from `activeMessages`.
+        *   `GetAllActiveMessages() map[int64]*RefreshingMessage`: Returns a *copy* of `activeMessages`. 

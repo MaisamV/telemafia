@@ -74,30 +74,34 @@
 │   │               └── get_games.go
 │   ├── presentation/     # Presentation Layer (Driving Adapters)
 │   │   └── telegram/     # Telegram Bot Adapter
-│   │       └── handler/    # Handlers mapping Telegram commands/callbacks to domain use cases
-│   │           ├── bot_handler.go       # Main handler struct, DI, registration
-│   │           ├── callbacks.go         # Main callback router (HandleCallback)
-│   │           ├── refresh.go           # Dynamic message refresh logic (e.g., RefreshRoomsList)
-│   │           ├── common_handlers.go   # NEW: Handlers for /start, /help
-│   │           ├── room/                # EXPORTED Handlers related to the Room domain
-│   │           │   ├── create_room.go
-│   │           │   ├── join_room.go
-│   │           │   ├── leave_room.go
-│   │           │   ├── kick_user.go
-│   │           │   ├── delete_room.go
-│   │           │   ├── list_rooms.go
-│   │           │   ├── my_rooms.go
-│   │           │   └── callbacks_room.go
-│   │           ├── scenario/            # Handlers related to the Scenario domain
-│   │           │   ├── create_scenario.go
-│   │           │   ├── delete_scenario.go
-│   │           │   ├── manage_roles.go
-│   │           │   └── callbacks_scenario.go # (Empty for now, add if needed)
-│   │           └── game/                # Handlers related to the Game domain
-│   │               ├── assign_scenario.go
-│   │               ├── assign_roles.go
-│   │               ├── list_games.go
-│   │               └── callbacks_game.go
+│   │       ├── handler/    # Handlers mapping Telegram commands/callbacks to domain use cases
+│   │       │   ├── bot_handler.go       # Main handler struct, DI, registration
+│   │       │   ├── callbacks.go         # Main callback router (handleCallback method on BotHandler)
+│   │       │   ├── refresh.go           # Background refresh timer and message update logic
+│   │       │   ├── common_handlers.go   # Exported handlers for /start, /help
+│   │       │   ├── room/                # Exported Handlers related to the Room domain
+│   │       │   │   ├── create_room.go
+│   │       │   │   ├── join_room.go
+│   │       │   │   ├── leave_room.go
+│   │       │   │   ├── kick_user.go
+│   │       │   │   ├── delete_room.go
+│   │       │   │   ├── list_rooms.go      # Contains PrepareRoomListMessage
+│   │       │   │   ├── my_rooms.go
+│   │       │   │   ├── get_room_detail.go # NEW: Contains RoomDetailMessage
+│   │       │   │   └── callbacks_room.go  # Exported callback handlers for room actions
+│   │       │   ├── scenario/            # Exported Handlers related to the Scenario domain
+│   │       │   │   ├── create_scenario.go
+│   │       │   │   ├── delete_scenario.go
+│   │       │   │   ├── manage_roles.go    # Handles Add/Remove Role commands
+│   │       │   │   └── callbacks_scenario.go # Exported callback handlers for scenario actions (if any)
+│   │       │   └── game/                # Exported Handlers related to the Game domain
+│   │       │       ├── assign_scenario.go # Handles assigning scenario AND creating game
+│   │       │       ├── assign_roles.go
+│   │       │       ├── list_games.go
+│   │       │       └── callbacks_game.go  # Exported callback handlers for game actions
+│   │       └── messages/     # NEW: Loading and structuring user-facing messages
+│   │           ├── loader.go   # NEW: Function to load messages from file
+│   │           └── messages.go # NEW: Struct definition for all messages
 │   └── shared/           # Shared components across layers/domains
 │       ├── common/       # General utility functions (DEPRECATED? -> see tgutil)
 │       │   └── utils.go
@@ -109,10 +113,14 @@
 │       ├── logger/       # (Optional) Shared logger implementation
 │       │   └── logger.go
 │       └── tgutil/       # NEW: Shared Telegram utility functions and constants
-│           ├── const.go
-│           └── util.go
+│           ├── const.go        # Callback unique identifiers
+│           ├── util.go         # Utility functions (ToUser, IsAdmin, SplitCallbackData)
+│           └── refresh_state.go # NEW: Defines RefreshingMessageBook for dynamic updates
+│               └── util.go
 ├── README.md             # Project overview, setup, and usage instructions
 ├── structure.txt         # (Optional) Text version of this structure spec
+├── messages.json         # NEW: Contains all user-facing text content
+├── project.prd           # NEW: Project requirements document
 └── tests/                # Unit and integration tests (structure TBD)
     └── ...
 ```
@@ -129,7 +137,8 @@
 *   Telegram command and callback handlers are organized:
     *   Domain-specific handlers (`/create_room`, `/assign_scenario`, etc.) reside in EXPORTED functions within subdirectories (`room/`, `scenario/`, `game/`).
     *   Common handlers (`/start`, `/help`) reside in an EXPORTED function file (e.g., `common_handlers.go`) in the parent `handler` directory.
-    *   The main `BotHandler` struct, dispatcher methods, and the main callback router (`handleCallback`) remain in the parent `handler` directory (`bot_handler.go`, `callbacks.go`).
+    *   The main `BotHandler` struct, dispatcher methods (`handle...` methods), and the main callback router (`handleCallback` method) remain in the parent `handler` directory (`bot_handler.go`, `callbacks.go`).
     *   Dispatcher methods and the callback router call the exported handler functions from the corresponding files/sub-packages.
 *   Shared Telegram-specific utilities (`ToUser`, `IsAdmin`, etc.) and constants (`Unique...`) reside in `internal/shared/tgutil/`.
-*   Dynamic message refreshing logic (like `RefreshRoomsList`) resides in `refresh.go` and is initiated in `BotHandler.Start()`. 
+*   Dynamic message refreshing logic resides in `refresh.go` and uses the `RefreshingMessageBook` defined in `tgutil/refresh_state.go`. Message content/markup is prepared by functions like `room.PrepareRoomListMessage`.
+*   All user-facing text is loaded from `messages.json` via the `internal/presentation/telegram/messages` package. 

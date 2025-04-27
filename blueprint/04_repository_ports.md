@@ -4,73 +4,53 @@
 
 ## 4.1. Room Repository (`internal/domain/room/port/room_repository.go`)
 
-```go
-package port
+*   **`RoomReader` Interface**
+    *   **Purpose:** Defines methods for reading room data.
+    *   **Methods:**
+        *   `GetRoomByID(id roomEntity.RoomID) (*roomEntity.Room, error)`: Get room by ID.
+        *   `GetRooms() ([]*roomEntity.Room, error)`: Get all rooms.
+        *   `GetPlayerRooms(playerID sharedEntity.UserID) ([]*roomEntity.Room, error)`: Get rooms a specific player is in.
+        *   `GetPlayersInRoom(roomID roomEntity.RoomID) ([]*sharedEntity.User, error)`: Get players in a specific room.
 
-import (
-	roomEntity "telemafia/internal/domain/room/entity"
-	sharedEntity "telemafia/internal/shared/entity"
-)
+*   **`RoomWriter` Interface**
+    *   **Purpose:** Defines methods for writing/modifying room data.
+    *   **Methods:**
+        *   `CreateRoom(room *roomEntity.Room) error`: Create a new room.
+        *   `UpdateRoom(room *roomEntity.Room) error`: Update an existing room.
+        *   `AddPlayerToRoom(roomID roomEntity.RoomID, player *sharedEntity.User) error`: Add a player to a room.
+        *   `RemovePlayerFromRoom(roomID roomEntity.RoomID, playerID sharedEntity.UserID) error`: Remove a player from a room.
+        *   `DeleteRoom(roomID roomEntity.RoomID) error`: Delete a room by ID.
 
-// RoomReader defines the interface for reading room data
-type RoomReader interface {
-	GetRoomByID(id roomEntity.RoomID) (*roomEntity.Room, error)
-	GetRooms() ([]*roomEntity.Room, error)
-	GetPlayerRooms(playerID sharedEntity.UserID) ([]*roomEntity.Room, error)
-	GetPlayersInRoom(roomID roomEntity.RoomID) ([]*sharedEntity.User, error)
-}
-
-// RoomWriter defines the interface for writing room data
-type RoomWriter interface {
-	CreateRoom(room *roomEntity.Room) error
-	UpdateRoom(room *roomEntity.Room) error
-	AddPlayerToRoom(roomID roomEntity.RoomID, player *sharedEntity.User) error
-	RemovePlayerFromRoom(roomID roomEntity.RoomID, playerID sharedEntity.UserID) error
-	DeleteRoom(roomID roomEntity.RoomID) error
-}
-
-// RoomRepository defines the combined interface for room persistence
-type RoomRepository interface {
-	RoomReader
-	RoomWriter
-}
+*   **`RoomRepository` Interface**
+    *   **Purpose:** Combined interface embedding `RoomReader` and `RoomWriter` for room persistence.
+    *   **Composition:** Embeds `RoomReader`, `RoomWriter`.
 
 **Notes:**
 
-*   The `CheckChangeFlag`, `ConsumeChangeFlag`, and `RaiseChangeFlag` methods have been **removed**. This state management is now handled within the presentation layer using `tgutil.RefreshState`.
-*   `AssignScenarioToRoom` and `GetRoomScenario` methods have been removed. Room state changes (like setting `ScenarioName` or adding `Description`) should be done on the `Room` entity itself, and then persisted using the `UpdateRoom` method.
-*   The repository should handle potential errors like `ErrRoomNotFound`, `ErrRoomAlreadyExists`, `ErrPlayerNotInRoom` as defined in the Room entity package.
+*   Refresh state management (previously handled via change flags in the repository) is now handled within the presentation layer using `tgutil.RefreshState`.
+*   The repository port interfaces (`RoomReader`, `RoomWriter`, `RoomRepository`) **MUST NOT** include any methods related to change flags (e.g., `CheckChangeFlag`, `ConsumeChangeFlag`). This state is managed entirely by the presentation layer (`internal/presentation/telegram/handler` and `internal/shared/tgutil`).
+*   `AssignScenarioToRoom` and `GetRoomScenario` methods are not part of the repository. Room state changes (like setting `ScenarioName` or adding `Description`) should be done on the `Room` entity itself, and then persisted using the `UpdateRoom` method.
+*   The repository implementation should handle potential errors like `roomEntity.ErrRoomNotFound`, `roomEntity.ErrRoomAlreadyExists`, `roomEntity.ErrPlayerNotInRoom`.
 
 ## 4.2. Scenario Repository (`internal/domain/scenario/port/scenario_repository.go`)
 
-```go
-package port
+*   **`ScenarioReader` Interface**
+    *   **Purpose:** Defines methods for reading scenario data.
+    *   **Methods:**
+        *   `GetScenarioByID(id string) (*scenarioEntity.Scenario, error)`: Get scenario by ID.
+        *   `GetAllScenarios() ([]*scenarioEntity.Scenario, error)`: Get all scenarios.
 
-import (
-	scenarioEntity "telemafia/internal/domain/scenario/entity"
-)
+*   **`ScenarioWriter` Interface**
+    *   **Purpose:** Defines methods for writing/modifying scenario data.
+    *   **Methods:**
+        *   `CreateScenario(scenario *scenarioEntity.Scenario) error`: Create a new scenario.
+        *   `DeleteScenario(id string) error`: Delete a scenario by ID.
+        *   `AddRoleToScenario(scenarioID string, role scenarioEntity.Role) error`: Add a role to a specific scenario.
+        *   `RemoveRoleFromScenario(scenarioID string, roleName string) error`: Remove a role (by name) from a specific scenario.
 
-// ScenarioReader defines the interface for reading scenario data
-type ScenarioReader interface {
-	GetScenarioByID(id string) (*scenarioEntity.Scenario, error)
-	GetAllScenarios() ([]*scenarioEntity.Scenario, error)
-}
-
-// ScenarioWriter defines the interface for writing scenario data
-type ScenarioWriter interface {
-	CreateScenario(scenario *scenarioEntity.Scenario) error
-	DeleteScenario(id string) error
-	AddRoleToScenario(scenarioID string, role scenarioEntity.Role) error
-	RemoveRoleFromScenario(scenarioID string, roleName string) error
-}
-
-// ScenarioRepository defines the interface for scenario persistence
-type ScenarioRepository interface {
-	ScenarioReader
-	ScenarioWriter
-}
-
-```
+*   **`ScenarioRepository` Interface**
+    *   **Purpose:** Combined interface embedding `ScenarioReader` and `ScenarioWriter` for scenario persistence.
+    *   **Composition:** Embeds `ScenarioReader`, `ScenarioWriter`.
 
 **Notes:**
 
@@ -80,55 +60,35 @@ type ScenarioRepository interface {
 
 ## 4.3. Game Repository (`internal/domain/game/port/game_repository.go`)
 
-```go
-package port
+*   **`GameReader` Interface**
+    *   **Purpose:** Defines methods for reading game data.
+    *   **Methods:**
+        *   `GetGameByID(id gameEntity.GameID) (*gameEntity.Game, error)`: Get game by ID.
+        *   `GetGameByRoomID(roomID roomEntity.RoomID) (*gameEntity.Game, error)`: Get the game associated with a specific room ID.
+        *   `GetAllGames() ([]*gameEntity.Game, error)`: Get all active games.
 
-import (
-	gameEntity "telemafia/internal/domain/game/entity"
-	roomEntity "telemafia/internal/domain/room/entity" // Needed for RoomID
-)
+*   **`GameWriter` Interface**
+    *   **Purpose:** Defines methods for writing/modifying game data.
+    *   **Methods:**
+        *   `CreateGame(game *gameEntity.Game) error`: Create a new game instance.
+        *   `UpdateGame(game *gameEntity.Game) error`: Update an existing game (used for saving state changes like assignments, state transitions).
+        *   `DeleteGame(id gameEntity.GameID) error`: Delete a game by ID.
 
-// GameReader defines the interface for reading game data
-type GameReader interface {
-	GetGameByID(id gameEntity.GameID) (*gameEntity.Game, error)
-	GetGameByRoomID(roomID roomEntity.RoomID) (*gameEntity.Game, error)
-	GetAllGames() ([]*gameEntity.Game, error)
-}
-
-// GameWriter defines the interface for writing game data
-type GameWriter interface {
-	CreateGame(game *gameEntity.Game) error
-	UpdateGame(game *gameEntity.Game) error // Used for saving state changes (like assignments, state transitions)
-	DeleteGame(id gameEntity.GameID) error
-}
-
-// GameRepository defines the interface for game persistence
-type GameRepository interface {
-	GameReader
-	GameWriter
-}
-```
+*   **`GameRepository` Interface**
+    *   **Purpose:** Combined interface embedding `GameReader` and `GameWriter` for game persistence.
+    *   **Composition:** Embeds `GameReader`, `GameWriter`.
 
 **Notes:**
 
-*   `UpdateGame` is crucial for persisting changes made to the Game entity after creation (e.g., adding assignments, changing state).
+*   `UpdateGame` is crucial for persisting changes made to the Game entity after creation.
 *   Should handle errors like game not found, game already exists.
 
 ## 4.4. Room Client Port (`internal/domain/game/port/room_client.go`)
 
-```go
-package port
-
-import (
-	roomEntity "telemafia/internal/domain/room/entity"
-)
-
-// RoomClient defines an interface for the Game domain to fetch Room data.
-// Implementations could be local (monolith) or remote (microservice).
-type RoomClient interface {
-	FetchRoom(id roomEntity.RoomID) (*roomEntity.Room, error)
-}
-```
+*   **`RoomClient` Interface**
+    *   **Purpose:** Defines an interface for the Game domain to fetch Room data (abstraction for potential microservice communication).
+    *   **Methods:**
+        *   `FetchRoom(id roomEntity.RoomID) (*roomEntity.Room, error)`: Fetches room data by ID.
 
 **Notes:**
 
@@ -136,19 +96,10 @@ type RoomClient interface {
 
 ## 4.5. Scenario Client Port (`internal/domain/game/port/scenario_client.go`)
 
-```go
-package port
-
-import (
-	scenarioEntity "telemafia/internal/domain/scenario/entity"
-)
-
-// ScenarioClient defines an interface for the Game domain to fetch Scenario data.
-// Implementations could be local (monolith) or remote (microservice).
-type ScenarioClient interface {
-	FetchScenario(id string) (*scenarioEntity.Scenario, error)
-}
-```
+*   **`ScenarioClient` Interface**
+    *   **Purpose:** Defines an interface for the Game domain to fetch Scenario data (abstraction for potential microservice communication).
+    *   **Methods:**
+        *   `FetchScenario(id string) (*scenarioEntity.Scenario, error)`: Fetches scenario data by ID.
 
 **Notes:**
 

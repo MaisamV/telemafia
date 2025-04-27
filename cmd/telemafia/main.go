@@ -13,6 +13,7 @@ import (
 	scenarioCommand "telemafia/internal/domain/scenario/usecase/command"
 	scenarioQuery "telemafia/internal/domain/scenario/usecase/query"
 	telegramHandler "telemafia/internal/presentation/telegram/handler"
+	messages "telemafia/internal/presentation/telegram/messages"
 	"telemafia/internal/shared/event"
 	"time"
 
@@ -36,8 +37,14 @@ func main() {
 		log.Fatalf("Configuration error: %v", err)
 	}
 
+	// Load Messages
+	msgs, err := messages.LoadMessages("messages.json")
+	if err != nil {
+		log.Fatalf("Messages loading error: %v", err)
+	}
+
 	// Initialize Dependencies (Composition Root)
-	botHandler, err := initializeDependencies(cfg)
+	botHandler, err := initializeDependencies(cfg, msgs)
 	if err != nil {
 		log.Fatalf("Initialization error: %v", err)
 	}
@@ -51,7 +58,7 @@ func main() {
 }
 
 // initializeDependencies sets up and wires all components
-func initializeDependencies(cfg *config.Config) (*telegramHandler.BotHandler, error) {
+func initializeDependencies(cfg *config.Config, msgs *messages.Messages) (*telegramHandler.BotHandler, error) {
 	// Initialize Telegram Bot
 	botSettings := telebot.Settings{
 		Token:  cfg.TelegramBotToken,
@@ -106,7 +113,8 @@ func initializeDependencies(cfg *config.Config) (*telegramHandler.BotHandler, er
 	botHandler := telegramHandler.NewBotHandler(
 		telegramBot,
 		cfg.AdminUsernames,
-		roomRepo, // Pass the room repository (as RoomWriter)
+		msgs,
+		roomRepo,
 		createRoomHandler,
 		joinRoomHandler,
 		leaveRoomHandler,
@@ -116,7 +124,7 @@ func initializeDependencies(cfg *config.Config) (*telegramHandler.BotHandler, er
 		getPlayerRoomsHandler,
 		getPlayersInRoomsHandler,
 		getRoomHandler,
-		addDescriptionHandler, // ADDED in correct position
+		addDescriptionHandler,
 		createScenarioHandler,
 		deleteScenarioHandler,
 		manageRolesHandler,

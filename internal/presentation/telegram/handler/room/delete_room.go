@@ -5,38 +5,39 @@ import (
 	"fmt"
 
 	roomQuery "telemafia/internal/domain/room/usecase/query"
+	messages "telemafia/internal/presentation/telegram/messages"
 	tgutil "telemafia/internal/shared/tgutil"
 
 	"gopkg.in/telebot.v3"
 )
 
-// HandleDeleteRoom handles the /delete_room command (now a function)
-func HandleDeleteRoom(getRoomsHandler *roomQuery.GetRoomsHandler, c telebot.Context) error {
-	requester := tgutil.ToUser(c.Sender())
-	if requester == nil {
-		return c.Send("Could not identify requester.")
+// HandleDeleteRoom handles the first step of /delete_room, showing the selection.
+func HandleDeleteRoom(
+	getRoomsHandler *roomQuery.GetRoomsHandler,
+	c telebot.Context,
+	msgs *messages.Messages,
+) error {
+	user := tgutil.ToUser(c.Sender())
+	if user == nil || !user.Admin {
+		return c.Send(msgs.Common.ErrorPermissionDenied)
 	}
 
-	query := roomQuery.GetRoomsQuery{}
-	rooms, err := getRoomsHandler.Handle(context.Background(), query)
+	rooms, err := getRoomsHandler.Handle(context.Background(), roomQuery.GetRoomsQuery{})
 	if err != nil {
-		return c.Send(fmt.Sprintf("Failed to fetch rooms list: %v", err))
+		return c.Send(msgs.Room.DeleteErrorFetch)
 	}
 
 	if len(rooms) == 0 {
-		return c.Send("No rooms exist to delete.")
+		return c.Send(msgs.Room.DeleteNoRooms)
 	}
 
-	var buttons [][]telebot.InlineButton
+	markup := &telebot.ReplyMarkup{}
+	var rows []telebot.Row
 	for _, room := range rooms {
-		btn := telebot.InlineButton{
-			Unique: tgutil.UniqueDeleteRoomSelectRoom,
-			Text:   fmt.Sprintf("%s (%s)", room.Name, room.ID),
-			Data:   string(room.ID),
-		}
-		buttons = append(buttons, []telebot.InlineButton{btn})
+		btn := markup.Data(fmt.Sprintf("%s (%s)", room.Name, room.ID), tgutil.UniqueDeleteRoomSelectRoom, string(room.ID))
+		rows = append(rows, markup.Row(btn))
 	}
+	markup.Inline(rows...)
 
-	markup := &telebot.ReplyMarkup{InlineKeyboard: buttons}
-	return c.Send("Select a room to delete:", markup)
+	return c.Send(msgs.Room.DeletePromptSelect, markup)
 }

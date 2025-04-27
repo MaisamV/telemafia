@@ -3,11 +3,12 @@ package telegram
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 
 	roomEntity "telemafia/internal/domain/room/entity"
 	roomCommand "telemafia/internal/domain/room/usecase/command"
+	messages "telemafia/internal/presentation/telegram/messages"
+	"telemafia/internal/shared/common"
 	sharedEntity "telemafia/internal/shared/entity"
 	tgutil "telemafia/internal/shared/tgutil"
 
@@ -16,36 +17,40 @@ import (
 
 // RefreshNotifier is defined in create_room.go (same package)
 
-// HandleKickUser handles the /kick_user command (now a function)
-func HandleKickUser(kickUserHandler *roomCommand.KickUserHandler, refreshNotifier RefreshNotifier, c telebot.Context) error {
-	parts := strings.Fields(c.Message().Payload)
-	if len(parts) != 2 {
-		return c.Send("Usage: /kick_user <room_id> <user_id>")
+// HandleKickUser handles the /kick_user command.
+func HandleKickUser(
+	kickUserHandler *roomCommand.KickUserHandler,
+	refreshNotifier RefreshNotifier,
+	c telebot.Context,
+	msgs *messages.Messages,
+) error {
+	args := strings.Fields(c.Message().Payload)
+	if len(args) != 2 {
+		return c.Send(msgs.Room.KickPrompt)
 	}
+	roomIDStr := args[0]
+	userIDStr := args[1]
 
-	roomID := roomEntity.RoomID(parts[0])
-	playerIDStr := parts[1]
-
-	playerID, err := strconv.ParseInt(playerIDStr, 10, 64)
+	userID, err := common.StringToInt64(userIDStr)
 	if err != nil {
-		return c.Send("Invalid user ID format.")
+		return c.Send(msgs.Room.KickInvalidUserID)
 	}
 
 	requester := tgutil.ToUser(c.Sender())
 	if requester == nil {
-		return c.Send("Could not identify requester.")
+		return c.Send(msgs.Common.ErrorIdentifyUser)
 	}
 
 	cmd := roomCommand.KickUserCommand{
 		Requester: *requester,
-		RoomID:    roomID,
-		PlayerID:  sharedEntity.UserID(playerID),
+		RoomID:    roomEntity.RoomID(roomIDStr),
+		PlayerID:  sharedEntity.UserID(userID),
 	}
 
 	if err := kickUserHandler.Handle(context.Background(), cmd); err != nil {
-		return c.Send(fmt.Sprintf("Error kicking user %d from room %s: %v", playerID, roomID, err))
+		return c.Send(fmt.Sprintf(msgs.Room.KickError, userID, roomIDStr, err))
 	}
 
 	refreshNotifier.RaiseRefreshNeeded()
-	return c.Send(fmt.Sprintf("User %d kicked from room %s", playerID, roomID))
+	return c.Send(fmt.Sprintf(msgs.Room.KickSuccess, userID, roomIDStr))
 }
