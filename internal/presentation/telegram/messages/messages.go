@@ -47,6 +47,9 @@ type RoomMessages struct {
 	LeaveCallbackMultiroomEdit  string `json:"leave_callback_multiroom_edit"`
 	LeaveCallbackNoroomError    string `json:"leave_callback_noroom_error"`
 	LeaveCallbackNoroomEdit     string `json:"leave_callback_noroom_edit"`
+	RoomNotFound                string `json:"RoomNotFound"`
+	InviteLinkButton            string `json:"InviteLinkButton"`
+	InviteLinkResponse          string `json:"InviteLinkResponse"`
 	KickPrompt                  string `json:"kick_prompt"`
 	KickInvalidUserID           string `json:"kick_invalid_user_id"`
 	KickSuccess                 string `json:"kick_success"`

@@ -2,6 +2,7 @@ package telegram
 
 import (
 	"log"
+	"strings"
 	"telemafia/internal/shared/tgutil"
 
 	// gameUsecase "telemafia/internal/game/usecase"
@@ -185,7 +186,8 @@ func (h *BotHandler) handleCreateRoom(c telebot.Context) error {
 }
 
 func (h *BotHandler) handleJoinRoom(c telebot.Context) error {
-	return room.HandleJoinRoom(h.joinRoomHandler, h.roomListRefreshMessage, h.roomDetailRefreshMessage, c, h.msgs)
+	roomIDStr := strings.TrimSpace(c.Message().Payload)
+	return room.HandleJoinRoom(h.joinRoomHandler, h.getRoomsHandler, h.getPlayersInRoomHandler, h.roomListRefreshMessage, h.roomDetailRefreshMessage, c, roomIDStr, h.msgs)
 }
 
 func (h *BotHandler) handleLeaveRoom(c telebot.Context) error {

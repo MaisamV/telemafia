@@ -58,7 +58,7 @@ func HandleLeaveRoomSelectCallback(
 	})
 	roomList.RaiseRefreshNeeded()
 	roomDetail.RaiseRefreshNeeded()
-	message, markup, err := PrepareRoomListMessage(getRoomsHandler, getPlayersInRoomHandler, msgs)
+	message, markup, err := RoomDetailMessage(getRoomsHandler, getPlayersInRoomHandler, msgs, data)
 	if err != nil {
 		return err
 	}

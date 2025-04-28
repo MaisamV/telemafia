@@ -13,7 +13,8 @@ const (
 
 	// Game/Assignment related
 	UniqueConfirmAssignments = "confirm_assignments"
-	// UniqueShowMyRole          = "show_my_role" // Placeholder if needed later
+	UniqueShowMyRole         = "show_my_role"
+	UniqueGetInviteLink      = "get_invite_link"
 
 	// Generic Cancel (might need context)
 	UniqueCancel = "cancel"

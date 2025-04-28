@@ -3,17 +3,20 @@ package telegram
 import (
 	"context"
 	"fmt"
-	"gopkg.in/telebot.v3"
 	"telemafia/internal/domain/room/entity"
 	roomQuery "telemafia/internal/domain/room/usecase/query"
 	"telemafia/internal/presentation/telegram/messages"
 	"telemafia/internal/shared/tgutil"
+
+	"gopkg.in/telebot.v3"
 )
 
-func RoomDetailMessage(getRoomsHandler *roomQuery.GetRoomsHandler,
+func RoomDetailMessage(
+	getRoomsHandler *roomQuery.GetRoomsHandler,
 	getPlayersInRoomHandler *roomQuery.GetPlayersInRoomHandler,
 	msgs *messages.Messages,
-	roomID string) (string, *telebot.ReplyMarkup, error) {
+	roomID string,
+) (string, *telebot.ReplyMarkup, error) {
 	// Fetch players in the room
 	players, err := getPlayersInRoomHandler.Handle(context.Background(), roomQuery.GetPlayersInRoomQuery{RoomID: entity.RoomID(roomID)})
 	if err != nil {
@@ -35,7 +38,7 @@ func RoomDetailMessage(getRoomsHandler *roomQuery.GetRoomsHandler,
 		}
 	}
 	if room == nil {
-		return "", nil, fmt.Errorf("room not found")
+		return "", nil, fmt.Errorf(msgs.Room.RoomNotFound, roomID)
 	}
 
 	playerNames := ""
@@ -56,12 +59,26 @@ func RoomDetailMessage(getRoomsHandler *roomQuery.GetRoomsHandler,
 			playerNames)
 	}
 
-	// Create a "Leave this room" button
+	// Create buttons
+	markup := &telebot.ReplyMarkup{}
+	var buttons []telebot.InlineButton
+
+	// Add Leave Button
 	leaveButton := telebot.InlineButton{
 		Unique: tgutil.UniqueLeaveRoomSelectRoom,
 		Text:   msgs.Room.LeaveButton,
 		Data:   roomID,
 	}
-	markup := &telebot.ReplyMarkup{InlineKeyboard: [][]telebot.InlineButton{{leaveButton}}}
+	buttons = append(buttons, leaveButton)
+
+	// Add Invite Link button - Always show
+	inviteButton := telebot.InlineButton{
+		Unique: tgutil.UniqueGetInviteLink,
+		Text:   msgs.Room.InviteLinkButton,
+		Data:   roomID,
+	}
+	buttons = append(buttons, inviteButton)
+
+	markup.InlineKeyboard = [][]telebot.InlineButton{buttons}
 	return messageText, markup, nil
 }

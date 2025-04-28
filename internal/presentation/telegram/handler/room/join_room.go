@@ -3,9 +3,10 @@ package telegram
 import (
 	"context"
 	"fmt"
-	"strings"
+	"log"
 	roomEntity "telemafia/internal/domain/room/entity"
 	roomCommand "telemafia/internal/domain/room/usecase/command"
+	roomQuery "telemafia/internal/domain/room/usecase/query"
 	messages "telemafia/internal/presentation/telegram/messages"
 	tgutil "telemafia/internal/shared/tgutil"
 
@@ -17,20 +18,21 @@ import (
 // HandleJoinRoom handles the /join_room command (now a function)
 func HandleJoinRoom(
 	joinRoomHandler *roomCommand.JoinRoomHandler,
-	roomListRefreshNotifier RefreshNotifier,
-	roomDetailRefreshNotifier RefreshNotifier,
+	getRoomsHandler *roomQuery.GetRoomsHandler,
+	getPlayersInRoomHandler *roomQuery.GetPlayersInRoomHandler,
+	roomList RefreshNotifier,
+	roomDetail RefreshNotifier,
 	c telebot.Context,
+	data string,
 	msgs *messages.Messages,
 ) error {
-	roomIDStr := strings.TrimSpace(c.Message().Payload)
-	if roomIDStr == "" {
+	if data == "" {
 		return c.Send(msgs.Room.JoinPrompt)
 	}
-
-	roomID := roomEntity.RoomID(roomIDStr)
+	roomID := roomEntity.RoomID(data)
 	user := tgutil.ToUser(c.Sender())
 	if user == nil {
-		return c.Send(msgs.Common.ErrorIdentifyUser)
+		return c.Respond(&telebot.CallbackResponse{Text: msgs.Common.ErrorIdentifyUser, ShowAlert: true})
 	}
 
 	cmd := roomCommand.JoinRoomCommand{
@@ -38,17 +40,34 @@ func HandleJoinRoom(
 		RoomID:    roomID,
 	}
 
-	err := joinRoomHandler.Handle(context.Background(), cmd)
-	if err != nil {
-		return c.Send(fmt.Sprintf(msgs.Room.JoinError, roomID, err))
+	if err := joinRoomHandler.Handle(context.Background(), cmd); err != nil {
+		log.Printf("Error handling join room callback for room '%s': %v", roomID, err)
+		return c.Respond(&telebot.CallbackResponse{Text: fmt.Sprintf(msgs.Common.CallbackErrorGeneric, err), ShowAlert: true})
 	}
-
-	roomListRefreshNotifier.RaiseRefreshNeeded()
-	roomDetailRefreshNotifier.RaiseRefreshNeeded()
-
-	markup := &telebot.ReplyMarkup{}
-	btnLeave := markup.Data(msgs.Room.LeaveConfirmButton, tgutil.UniqueLeaveRoomSelectRoom, string(roomID))
-	markup.Inline(markup.Row(btnLeave))
-
-	return c.Send(fmt.Sprintf(msgs.Room.JoinSuccess, roomID), markup)
+	chatID := c.Sender().ID
+	listMessage, listExists := roomList.GetActiveMessage(chatID)
+	roomMessage, roomExists := roomList.GetActiveMessage(chatID)
+	roomList.RemoveActiveMessage(chatID)
+	roomDetail.AddActiveMessage(chatID, &tgutil.RefreshingMessage{
+		Msg:  c.Message(),
+		Data: string(roomID),
+	})
+	roomList.RaiseRefreshNeeded()
+	roomDetail.RaiseRefreshNeeded()
+	message, markup, err := RoomDetailMessage(getRoomsHandler, getPlayersInRoomHandler, msgs, data)
+	if err != nil {
+		return err
+	}
+	msg, err := c.Bot().Send(c.Sender(), message, markup)
+	roomDetail.AddActiveMessage(chatID, &tgutil.RefreshingMessage{
+		Msg:  msg,
+		Data: string(roomID),
+	})
+	if listExists {
+		_ = c.Bot().Delete(listMessage.Msg)
+	}
+	if roomExists {
+		_ = c.Bot().Delete(roomMessage.Msg)
+	}
+	return err
 }

@@ -39,6 +39,8 @@ func (h *BotHandler) handleCallback(c telebot.Context) error {
 		return room.HandleLeaveRoomSelectCallback(h.leaveRoomHandler, h.getRoomsHandler, h.getPlayersInRoomHandler, h.roomListRefreshMessage, h.roomDetailRefreshMessage, c, data, h.msgs)
 	case tgutil.UniqueLeaveRoomConfirm:
 		return room.HandleLeaveRoomConfirmCallback(h.leaveRoomHandler, h.roomListRefreshMessage, c, data, h.msgs)
+	case tgutil.UniqueGetInviteLink:
+		return room.HandleGetInviteLinkCallback(h.bot, c, data, h.msgs)
 
 	// Game Callbacks - Pass messages struct
 	case tgutil.UniqueConfirmAssignments:
