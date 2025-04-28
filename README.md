@@ -1,121 +1,74 @@
-# TeleMafia Bot (Golang)
+# TeleMafia Bot
 
-This is a Telegram bot for managing Mafia game rooms, built with Golang. It features a layered architecture, dependency injection, and uses Command Query Responsibility Segregation (CQRS) principles for handling actions. Configuration is supported via both `config.json` and command-line arguments.
+[![Go Reference](https://pkg.go.dev/badge/github.com/username/telemafia.svg)](https://pkg.go.dev/github.com/username/telemafia)
+
+A Telegram bot written in Go to facilitate playing the party game Mafia.
 
 **Important Note:** This bot currently uses **in-memory storage**. This means all rooms, scenarios, games, and user data will be **lost** when the bot restarts.
 
 ---
 
-## 🛠 Installation
+## 🚀 Getting Started
 
-### 1️⃣ Install Go
-Make sure you have Go installed (at least Go 1.18). You can download it from:
-- Official Go Website: https://go.dev/dl/
+### Prerequisites
 
----
+*   Go (Version 1.18 or higher installed)
+*   A Telegram Bot Token from BotFather
 
-## 🚀 Running the Bot
+### Configuration
 
-### Option 1: Using config.json
-1. Create a `config.json` file in the project root with the following structure:
-   ```json
-   {
-     "telegram_bot_token": "YOUR_TELEGRAM_BOT_TOKEN",
-     "admin_usernames": ["admin1", "admin2"]
-   }
-   ```
-   * Replace `YOUR_TELEGRAM_BOT_TOKEN` with your actual bot token.
-   * Replace `admin1`, `admin2` with a comma-separated list of admin usernames (case-sensitive).
+The bot requires configuration for the Telegram token and admin usernames.
 
-2. Run the bot:
-   ```sh
-   go run main.go
-   ```
+1.  **`config.json` (Recommended):**
+    *   Create `config.json` in the project root:
+      ```json
+      {
+        "telegram_bot_token": "YOUR_TELEGRAM_BOT_TOKEN",
+        "admin_usernames": ["your_admin_username", "another_admin"]
+      }
+      ```
+    *   Replace placeholders with your actual token and desired admin Telegram usernames (case-sensitive).
+2.  **Command-line Flags (Overrides `config.json`):**
+    *   `-token "YOUR_TOKEN"`: Specifies the bot token.
+    *   `-admins "admin1,admin2"`: Specifies a comma-separated list of admin usernames.
 
----
+Additionally, the bot requires a `messages.json` file in the project root containing user-facing text. A default version is included.
 
-### Option 2: Using Command-Line Arguments
-If you don't have a `config.json`, you can pass parameters directly when starting the bot:
+### Running the Bot
 
-```sh
-go run main.go -token "YOUR_TELEGRAM_BOT_TOKEN" -admins "admin1,admin2"
-```
-
-* Replace `YOUR_TELEGRAM_BOT_TOKEN` with your actual bot token.
-* Replace `admin1,admin2` with a comma-separated list of admin usernames (case-sensitive).
-
-Example:
-
-```sh
-go run main.go -token "123456789:ABCDEF-TOKEN" -admins "john_doe,admin_user"
-```
-
----
-
-## 📝 Bot Commands
-
-The bot supports the following commands:
-
-### General Commands
-| Command          | Description                      | Who Can Use? |
-|------------------|----------------------------------|--------------|
-| `/start`         | Start interaction with the bot   | Everyone     |
-| `/help`          | Show help message                | Everyone     |
-
-### Room Management
-| Command                   | Description                                      | Who Can Use?  |
-|---------------------------|--------------------------------------------------|---------------|
-| `/create_room <room_name>`| Create a new room                                | Admins Only   |
-| `/join_room <room_id>`    | Join a specific room                             | Everyone      |
-| `/leave_room <room_id>`   | Leave a specific room                            | Everyone      |
-| `/list_rooms`             | List all available rooms                         | Everyone      |
-| `/my_rooms`               | List rooms you have joined                       | Everyone      |
-| `/kick_user <room_id> <username>` | Kick a user from a room                  | Admins Only   |
-| `/delete_room <room_id>`  | Delete a specific room                           | Admins Only   |
-| `/assign_scenario <room_id> <scenario_id>` | Assign a game scenario to a room | Admins Only   |
-
-### Scenario Management (Game Rulesets)
-*Scenarios define the set of roles available for a game.*
-| Command                           | Description                         | Who Can Use?  |
-|-----------------------------------|-------------------------------------|---------------|
-| `/create_scenario <scenario_name>`| Create a new game scenario          | Admins Only   |
-| `/delete_scenario <scenario_id>`  | Delete a game scenario              | Admins Only   |
-| `/add_role <scenario_id> <role_name>` | Add a role to a scenario        | Admins Only   |
-| `/remove_role <scenario_id> <role_name>`| Remove a role from a scenario | Admins Only   |
-| `/list_scenarios` (TODO)          | List available scenarios            | Admins Only   | (*Not yet implemented*) |
-
-### Game Management
-| Command                   | Description                                   | Who Can Use?  |
-|---------------------------|-----------------------------------------------|---------------|
-| `/games`                  | List active games (shows game ID and room ID) | Admins Only   |
-| `/assign_roles <game_id>` | Assign roles from the room's scenario to players in the game | Admins Only   |
+1.  **Navigate** to the project root directory.
+2.  **Run directly:**
+    ```bash
+    # Using config.json & messages.json
+    go run ./cmd/telemafia/main.go 
+    
+    # Using flags (ensure messages.json exists)
+    go run ./cmd/telemafia/main.go -token "YOUR_TOKEN" -admins "admin1,admin2"
+    ```
+3.  **Build and Run:**
+    ```bash
+    # Build the executable (e.g., named 'telemafia_bot')
+    go build -o telemafia_bot ./cmd/telemafia/
+    
+    # Run the executable (ensure config.json & messages.json are in the same directory)
+    ./telemafia_bot
+    
+    # Or run with flags (ensure messages.json is present)
+    ./telemafia_bot -token "YOUR_TOKEN" -admins "admin1,admin2"
+    ```
 
 ---
 
-## 🔧 How It Works
+## 📖 Documentation & Guidelines
 
-1.  **Configuration:** The bot reads settings (`telegram_bot_token`, `admin_usernames`) from command-line arguments (`-token`, `-admins`) first. If not provided, it falls back to `config.json`.
-2.  **Initialization:** It sets up the Telegram bot connection, initializes in-memory repositories for rooms, scenarios, and games, and prepares command/query handlers.
-3.  **Architecture:** The bot follows a layered architecture:
-    *   **Delivery (Telegram):** Handles incoming Telegram commands and callbacks, interacts with users.
-    *   **Internal (Core Logic):** Contains use cases (commands/queries), domain entities (Room, Game, Scenario, User), and repository interfaces. Uses CQRS pattern.
-    *   **Infrastructure:** Provides concrete implementations (currently in-memory) for repositories.
-4.  **Command Handling:** Incoming commands are routed to specific handlers in the delivery layer, which then execute corresponding use cases in the internal layer.
-5.  **Data Storage:** All application data (rooms, players, scenarios, games) is stored **in memory** and is **lost** upon bot restart.
-6.  **Admin Identification:** Admins are identified by their Telegram **username** (case-sensitive) as provided in the configuration.
-
----
-
-## 🛠 Troubleshooting
-
-🔹 **Problem:** "Missing bot token" error
-✔️ **Solution:** Ensure you provide a valid Telegram bot token via `config.json` or the `-token` command-line argument.
-
-🔹 **Problem:** "Admins not detected" or admin commands don't work
-✔️ **Solution:** Ensure the admin usernames in `config.json` or the `-admins` argument exactly match the Telegram usernames (case-sensitive).
-
-🔹 **Problem:** Rooms, scenarios, or game data disappear after restarting the bot.
-✔️ **Solution:** This is expected behavior. The bot currently uses **in-memory storage**, which does not persist data.
+*   **Project Overview:** For a high-level understanding of the bot's purpose, core concepts, and key features, see [project_overview.md](./project_overview.md).
+*   **Development Rules:** To ensure consistency in architecture, patterns, and code style, all contributors **MUST** follow the guidelines outlined in the `/rules` directory.
+    *   [Architecture Guidelines](./rules/01_architecture_guidelines.md)
+    *   [Design Patterns](./rules/02_design_patterns.md)
+    *   [Directory Structure Guide](./rules/03_directory_structure.md)
+    *   [Coding Conventions & Rules](./rules/04_coding_conventions.md)
+    *   [Telegram Presentation Layer Rules](./rules/05_telegram_layer.md)
+    *   [Domain Modeling Guidelines](./rules/06_domain_modeling.md)
 
 ---
 
@@ -124,7 +77,5 @@ The bot supports the following commands:
 This project is released under a **non-commercial license**.
 
 - You **may use, modify, and distribute** this project **for personal or educational purposes**.
-- You **cannot use this project** or its derivatives **for commercial purposes**, including selling it, integrating it into paid products, or using it in any way that generates revenue.
-- Any modifications or forks must retain this license and include attribution to the original author.
-
-If you wish to use this project for commercial purposes, please contact the author for licensing arrangements. 🚀  
+- You **cannot use this project** or its derivatives **for commercial purposes**.
+- Any modifications or forks must retain this license and include attribution.
