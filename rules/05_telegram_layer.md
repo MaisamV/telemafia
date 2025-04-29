@@ -28,6 +28,7 @@
 1.  **Define Unique Constant:** Add `UniqueCallbackName` in `internal/shared/tgutil/const.go`.
 2.  **Define Exported Function:** Create `HandleCallbackNameCallback` in the appropriate handler package (e.g., `room.HandleJoinRoomCallback`).
 3.  **Add Routing Case:** Add `case tgutil.UniqueCallbackName:` to the `switch` in `handleCallback` method (`callbacks.go`), calling the exported function.
+    *   **Note:** The `handleCallback` method itself acts solely as a dispatcher. It uses the unique identifier from the callback data to route the request to the appropriate exported handler function (defined in step 2) where the actual processing logic resides.
 4.  **Implementation:**
     *   Parse `data` passed into the function (originally from `tgutil.SplitCallbackData`).
     *   Convert sender (`c.Sender()`) if needed.
