@@ -192,10 +192,8 @@ func HandleStartCreatedGame(
 }
 
 // HandleCancelCreateGame handles cancellation at any step.
-func HandleCancelCreateGame(c telebot.Context, msgs *messages.Messages, gameIDMaybe ...string) error {
-	// Optional: If gameID is passed (e.g., cancel_creategame_game123), maybe delete the game record?
-	if len(gameIDMaybe) > 0 {
-		gameID := gameIDMaybe[0]
+func HandleCancelCreateGame(c telebot.Context, msgs *messages.Messages, gameID string) error {
+	if gameID != "" {
 		log.Printf("Game creation cancelled for potential game ID: %s", gameID)
 		//TODO: Add logic to delete game record if necessary
 	}

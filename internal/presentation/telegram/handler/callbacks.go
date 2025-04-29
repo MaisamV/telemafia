@@ -42,11 +42,7 @@ func (h *BotHandler) handleCallback(c telebot.Context) error {
 	case tgutil.UniqueStartGame:
 		return game.HandleStartCreatedGame(h.assignRolesHandler, h.bot, c, data, h.msgs)
 	case tgutil.UniqueCancelGame:
-		if data == "" { // Handle case where no game ID was appended yet
-			return game.HandleCancelCreateGame(c, h.msgs)
-		} else {
-			return game.HandleCancelCreateGame(c, h.msgs, data)
-		}
+		return game.HandleCancelCreateGame(c, h.msgs, data)
 
 	// Existing Room Callbacks (assuming tgutil still defines these constants)
 	case tgutil.UniqueJoinRoom:
