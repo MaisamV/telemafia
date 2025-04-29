@@ -98,9 +98,9 @@ func initializeDependencies(cfg *config.Config, msgs *messages.Messages) (*teleg
 	// Scenario Use Cases
 	createScenarioHandler := scenarioCommand.NewCreateScenarioHandler(scenarioRepo)
 	deleteScenarioHandler := scenarioCommand.NewDeleteScenarioHandler(scenarioRepo)
-	manageRolesHandler := scenarioCommand.NewManageRolesHandler(scenarioRepo)
 	getScenarioByIDHandler := scenarioQuery.NewGetScenarioByIDHandler(scenarioRepo)
 	getAllScenariosHandler := scenarioQuery.NewGetAllScenariosHandler(scenarioRepo)
+	addScenarioJSONHandler := scenarioCommand.NewAddScenarioJSONHandler(scenarioRepo)
 
 	// Game Use Cases
 	createGameHandler := gameCommand.NewCreateGameHandler(gameRepo, roomClient, scenarioClient)
@@ -127,9 +127,9 @@ func initializeDependencies(cfg *config.Config, msgs *messages.Messages) (*teleg
 		addDescriptionHandler,
 		createScenarioHandler,
 		deleteScenarioHandler,
-		manageRolesHandler,
 		getScenarioByIDHandler,
 		getAllScenariosHandler,
+		addScenarioJSONHandler,
 		assignRolesHandler,
 		createGameHandler,
 		getGamesHandler,

@@ -74,18 +74,23 @@ type RoomMessages struct {
 }
 
 type ScenarioMessages struct {
-	CreatePrompt      string `json:"create_prompt"`
-	CreateSuccess     string `json:"create_success"`
-	CreateError       string `json:"create_error"`
-	DeletePrompt      string `json:"delete_prompt"`
-	DeleteSuccess     string `json:"delete_success"`
-	DeleteError       string `json:"delete_error"`
-	AddRolePrompt     string `json:"add_role_prompt"`
-	AddRoleSuccess    string `json:"add_role_success"`
-	AddRoleError      string `json:"add_role_error"`
-	RemoveRolePrompt  string `json:"remove_role_prompt"`
-	RemoveRoleSuccess string `json:"remove_role_success"`
-	RemoveRoleError   string `json:"remove_role_error"`
+	CreatePrompt                   string `json:"create_prompt"`
+	CreateSuccess                  string `json:"create_success"`
+	CreateError                    string `json:"create_error"`
+	DeletePrompt                   string `json:"delete_prompt"`
+	DeleteSuccess                  string `json:"delete_success"`
+	DeleteError                    string `json:"delete_error"`
+	AddRolePrompt                  string `json:"add_role_prompt"`
+	AddRoleSuccess                 string `json:"add_role_success"`
+	AddRoleError                   string `json:"add_role_error"`
+	RemoveRolePrompt               string `json:"remove_role_prompt"`
+	RemoveRoleSuccess              string `json:"remove_role_success"`
+	RemoveRoleError                string `json:"remove_role_error"`
+	AddScenarioJSONPrompt          string `json:"add_scenario_json_prompt"`
+	AddScenarioJSONSuccess         string `json:"add_scenario_json_success"`
+	AddScenarioJSONInvalidJSON     string `json:"add_scenario_json_invalid_json"`
+	AddScenarioJSONValidationError string `json:"add_scenario_json_validation_error"`
+	AddScenarioJSONErrorGeneric    string `json:"add_scenario_json_error_generic"`
 }
 
 type GameMessages struct {

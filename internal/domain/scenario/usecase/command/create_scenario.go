@@ -37,7 +37,7 @@ func (h *CreateScenarioHandler) Handle(ctx context.Context, cmd CreateScenarioCo
 	scenario := &scenarioEntity.Scenario{
 		ID:    cmd.ID,
 		Name:  cmd.Name,
-		Roles: []scenarioEntity.Role{}, // Use imported Role type
+		Sides: []scenarioEntity.Side{}, // Use imported Role type
 	}
 	return h.scenarioRepo.CreateScenario(scenario) // Propagates errors from repo
 }

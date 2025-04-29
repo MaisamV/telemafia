@@ -1,6 +1,6 @@
 {
   "common": {
-    "help": "Available commands:\n/start - Show welcome message & rooms\n/help - Show this help message\n/list_rooms - List all available rooms\n/my_rooms - List rooms you have joined\n/join_room <room_id> - Join a specific room\n/leave_room <room_id> - Leave the specified room\n\nAdmin Commands:\n/create_room <room_name> - Create a new room\n/delete_room - Select a room to delete\n/kick_user <room_id> <user_id> - Kick a user from a room\n/create_scenario <scenario_name> - Create a new game scenario\n/delete_scenario <scenario_id> - Delete a scenario\n/add_role <scenario_id> <role_name> - Add a role to a scenario\n/remove_role <scenario_id> <role_name> - Remove a role from a scenario\n/assign_scenario <room_id> <scenario_id> - Assign a scenario to a room (creates a game)\n/games - List active games and their status\n/assign_roles <game_id> - Assign roles to players in a game",
+    "help": "Available commands:\n/start - Show welcome message & rooms\n/help - Show this help message\n/list_rooms - List all available rooms\n/my_rooms - List rooms you have joined\n/join_room <room_id> - Join a specific room\n/leave_room <room_id> - Leave the specified room\n\nAdmin Commands:\n/create_room <room_name> - Create a new room\n/delete_room - Select a room to delete\n/kick_user <room_id> <user_id> - Kick a user from a room\n/create_scenario <scenario_name> - Create a new game scenario\n/delete_scenario <scenario_id> - Delete a scenario\n/add_scenario_json <json_payload> - Add scenario from JSON\n/create_game - Interactively create a new game\n/games - List active games and their status\n/assign_roles <game_id> - Assign roles to players in a game",
     "error_generic": "An unexpected error occurred: %v",
     "error_identify_user": "Could not identify user.",
     "error_identify_requester": "Could not identify requester.",
@@ -68,15 +68,13 @@
     "delete_prompt": "Please provide a scenario ID: /delete_scenario <id>",
     "delete_success": "Scenario %s deleted successfully!",
     "delete_error": "Error deleting scenario '%s': %v",
-    "add_role_prompt": "Usage: /add_role <scenario_id> <role_name>",
-    "add_role_success": "Role '%s' added to scenario %s successfully!",
-    "add_role_error": "Error adding role '%s' to scenario '%s': %v",
-    "remove_role_prompt": "Usage: /remove_role <scenario_id> <role_name>",
-    "remove_role_success": "Role '%s' removed from scenario %s successfully!",
-    "remove_role_error": "Error removing role '%s' from scenario '%s': %v"
+    "add_scenario_json_prompt": "Usage: /add_scenario_json <json_payload>\nExample JSON:\n`{\"name\":\"Classic Mafia\",\"sides\":[{\"name\":\"Mafia\",\"default_role\":\"Mafia Member\",\"roles\":[\"Mafia Boss\",\"Mafia Member\"]},{\"name\":\"Civilian\",\"default_role\":\"Villager\",\"roles\":[\"Villager\",\"Doctor\",\"Detective\"]},{\"name\":\"Neutral\",\"default_role\":\"Jester\",\"roles\":[\"Jester\"]}]}`",
+    "add_scenario_json_success": "Scenario '%s' (ID: %s) added successfully from JSON!",
+    "add_scenario_json_invalid_json": "Error parsing JSON: %v",
+    "add_scenario_json_validation_error": "Invalid scenario data: %v",
+    "add_scenario_json_error_generic": "Error adding scenario from JSON: %v"
   },
   "game": {
-    "assign_scenario_prompt": "Usage: /assign_scenario <room_id> <scenario_id>",
     "assign_scenario_success": "Successfully assigned scenario '%s' (ID: %s) to room '%s' (ID: %s) and created game '%s'",
     "assign_scenario_error_room_find": "Error finding room '%s': %v",
     "assign_scenario_error_room_notfound": "Room '%s' not found.",

@@ -43,26 +43,26 @@ type BotHandler struct {
 	// activeRefreshMessages   map[int64]*telebot.Message // Map ChatID to the message being refreshed
 
 	// Use Case Handlers
-	roomRepo                roomPort.RoomWriter                    // Use roomPort
-	createRoomHandler       *roomCommand.CreateRoomHandler         // Use roomCommand
-	joinRoomHandler         *roomCommand.JoinRoomHandler           // Use roomCommand
-	leaveRoomHandler        *roomCommand.LeaveRoomHandler          // Use roomCommand
-	kickUserHandler         *roomCommand.KickUserHandler           // Use roomCommand
-	deleteRoomHandler       *roomCommand.DeleteRoomHandler         // Use roomCommand
-	getRoomsHandler         *roomQuery.GetRoomsHandler             // Use roomQuery
-	getPlayerRoomsHandler   *roomQuery.GetPlayerRoomsHandler       // Use roomQuery
-	getPlayersInRoomHandler *roomQuery.GetPlayersInRoomHandler     // Use roomQuery
-	getRoomHandler          *roomQuery.GetRoomHandler              // Use roomQuery
-	addDescriptionHandler   *roomCommand.AddDescriptionHandler     // Add handler field
-	createScenarioHandler   *scenarioCommand.CreateScenarioHandler // Use scenarioCommand
-	deleteScenarioHandler   *scenarioCommand.DeleteScenarioHandler // Use scenarioCommand
-	manageRolesHandler      *scenarioCommand.ManageRolesHandler    // Use scenarioCommand
-	getScenarioByIDHandler  *scenarioQuery.GetScenarioByIDHandler  // Use scenarioQuery
-	getAllScenariosHandler  *scenarioQuery.GetAllScenariosHandler  // Use scenarioQuery
-	assignRolesHandler      *gameCommand.AssignRolesHandler        // Use gameCommand
-	createGameHandler       *gameCommand.CreateGameHandler         // Use gameCommand
-	getGamesHandler         *gameQuery.GetGamesHandler             // Use gameQuery
-	getGameByIDHandler      *gameQuery.GetGameByIDHandler          // Use gameQuery
+	roomRepo                roomPort.RoomWriter                     // Use roomPort
+	createRoomHandler       *roomCommand.CreateRoomHandler          // Use roomCommand
+	joinRoomHandler         *roomCommand.JoinRoomHandler            // Use roomCommand
+	leaveRoomHandler        *roomCommand.LeaveRoomHandler           // Use roomCommand
+	kickUserHandler         *roomCommand.KickUserHandler            // Use roomCommand
+	deleteRoomHandler       *roomCommand.DeleteRoomHandler          // Use roomCommand
+	getRoomsHandler         *roomQuery.GetRoomsHandler              // Use roomQuery
+	getPlayerRoomsHandler   *roomQuery.GetPlayerRoomsHandler        // Use roomQuery
+	getPlayersInRoomHandler *roomQuery.GetPlayersInRoomHandler      // Use roomQuery
+	getRoomHandler          *roomQuery.GetRoomHandler               // Use roomQuery
+	addDescriptionHandler   *roomCommand.AddDescriptionHandler      // Add handler field
+	createScenarioHandler   *scenarioCommand.CreateScenarioHandler  // Use scenarioCommand
+	deleteScenarioHandler   *scenarioCommand.DeleteScenarioHandler  // Use scenarioCommand
+	getScenarioByIDHandler  *scenarioQuery.GetScenarioByIDHandler   // Use scenarioQuery
+	getAllScenariosHandler  *scenarioQuery.GetAllScenariosHandler   // Use scenarioQuery
+	addScenarioJSONHandler  *scenarioCommand.AddScenarioJSONHandler // NEW: Inject AddScenarioJSONHandler
+	assignRolesHandler      *gameCommand.AssignRolesHandler         // Use gameCommand
+	createGameHandler       *gameCommand.CreateGameHandler          // Use gameCommand
+	getGamesHandler         *gameQuery.GetGamesHandler              // Use gameQuery
+	getGameByIDHandler      *gameQuery.GetGameByIDHandler           // Use gameQuery
 }
 
 // NewBotHandler creates a new BotHandler with all dependencies
@@ -83,9 +83,9 @@ func NewBotHandler(
 	addDescriptionHandler *roomCommand.AddDescriptionHandler, // Add handler param
 	createScenarioHandler *scenarioCommand.CreateScenarioHandler, // Use scenarioCommand
 	deleteScenarioHandler *scenarioCommand.DeleteScenarioHandler, // Use scenarioCommand
-	manageRolesHandler *scenarioCommand.ManageRolesHandler, // Use scenarioCommand
 	getScenarioByIDHandler *scenarioQuery.GetScenarioByIDHandler, // Use scenarioQuery
 	getAllScenariosHandler *scenarioQuery.GetAllScenariosHandler, // Use scenarioQuery
+	addScenarioJSONHandler *scenarioCommand.AddScenarioJSONHandler, // NEW: Inject AddScenarioJSONHandler
 	assignRolesHandler *gameCommand.AssignRolesHandler, // Use gameCommand
 	createGameHandler *gameCommand.CreateGameHandler, // Use gameCommand
 	getGamesHandler *gameQuery.GetGamesHandler, // Use gameQuery
@@ -113,9 +113,9 @@ func NewBotHandler(
 		addDescriptionHandler:    addDescriptionHandler, // Assign handler
 		createScenarioHandler:    createScenarioHandler,
 		deleteScenarioHandler:    deleteScenarioHandler,
-		manageRolesHandler:       manageRolesHandler,
 		getScenarioByIDHandler:   getScenarioByIDHandler,
 		getAllScenariosHandler:   getAllScenariosHandler,
+		addScenarioJSONHandler:   addScenarioJSONHandler, // NEW: Assign handler
 		assignRolesHandler:       assignRolesHandler,
 		createGameHandler:        createGameHandler,
 		getGamesHandler:          getGamesHandler,
@@ -154,8 +154,7 @@ func (h *BotHandler) RegisterHandlers() {
 	// Scenario Handlers
 	h.bot.Handle("/create_scenario", h.handleCreateScenario)
 	h.bot.Handle("/delete_scenario", h.handleDeleteScenario)
-	h.bot.Handle("/add_role", h.handleAddRole)
-	h.bot.Handle("/remove_role", h.handleRemoveRole)
+	h.bot.Handle("/add_scenario_json", h.handleAddScenarioJSON) // NEW: Register command
 	// TODO: Add /list_scenarios handler
 
 	// Game Handlers
@@ -220,12 +219,9 @@ func (h *BotHandler) handleDeleteScenario(c telebot.Context) error {
 	return scenario.HandleDeleteScenario(h.deleteScenarioHandler, c, h.msgs)
 }
 
-func (h *BotHandler) handleAddRole(c telebot.Context) error {
-	return scenario.HandleAddRole(h.manageRolesHandler, c, h.msgs)
-}
-
-func (h *BotHandler) handleRemoveRole(c telebot.Context) error {
-	return scenario.HandleRemoveRole(h.manageRolesHandler, c, h.msgs)
+// NEW: Dispatcher method for Add Scenario JSON
+func (h *BotHandler) handleAddScenarioJSON(c telebot.Context) error {
+	return scenario.HandleAddScenarioJSON(h.addScenarioJSONHandler, c, h.msgs)
 }
 
 // --- Game ---
