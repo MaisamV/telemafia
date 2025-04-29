@@ -22,13 +22,33 @@ func (h *BotHandler) handleCallback(c telebot.Context) error {
 		return nil
 	}
 
-	// SplitCallbackData defined in util.go (same package)
-	unique, data := tgutil.SplitCallbackData(callback.Data)
+	rawData := callback.Data
+	unique, data := tgutil.SplitCallbackData(rawData)
 	userID := c.Sender().ID
-	log.Printf("Callback received: User=%d, Unique=%s, Data=%s", userID, unique, data)
+	log.Printf("Callback received: User=%d, Data=%s", userID, rawData)
+	log.Printf("unique=%s, data=%s", unique, data)
 
 	switch unique {
-	// Room Callbacks - Pass messages struct
+	// Game Creation Callbacks
+	case tgutil.UniqueCreateGameSelectRoom:
+		return game.HandleSelectRoomForCreateGame(h.getAllScenariosHandler, c, data, h.msgs)
+	case tgutil.UniqueCreateGameSelectScenario:
+		roomID, scenarioID := tgutil.SplitCallbackData(data)
+		if roomID == "" || scenarioID == "" {
+			log.Printf("Invalid creategame_scen callback data: %s", rawData)
+			return c.Respond(&telebot.CallbackResponse{Text: "Invalid callback data.", ShowAlert: true})
+		}
+		return game.HandleSelectScenarioForCreateGame(h.createGameHandler, h.getPlayersInRoomHandler, h.getScenarioByIDHandler, c, roomID, scenarioID, h.msgs)
+	case tgutil.UniqueStartGame:
+		return game.HandleStartCreatedGame(h.assignRolesHandler, h.bot, c, data, h.msgs)
+	case tgutil.UniqueCancelGame:
+		if data == "" { // Handle case where no game ID was appended yet
+			return game.HandleCancelCreateGame(c, h.msgs)
+		} else {
+			return game.HandleCancelCreateGame(c, h.msgs, data)
+		}
+
+	// Existing Room Callbacks (assuming tgutil still defines these constants)
 	case tgutil.UniqueJoinRoom:
 		return room.HandleJoinRoomCallback(h.joinRoomHandler, h.getRoomsHandler, h.getPlayersInRoomHandler, h.roomListRefreshMessage, h.roomDetailRefreshMessage, c, data, h.msgs)
 	case tgutil.UniqueDeleteRoomSelectRoom:
@@ -42,21 +62,17 @@ func (h *BotHandler) handleCallback(c telebot.Context) error {
 	case tgutil.UniqueGetInviteLink:
 		return room.HandleGetInviteLinkCallback(h.bot, c, data, h.msgs)
 
-	// Game Callbacks - Pass messages struct
+	// Existing Game Callbacks
 	case tgutil.UniqueConfirmAssignments:
 		return game.HandleConfirmAssignments(h.getGameByIDHandler, c, data, h.msgs)
-	// case UniqueShowMyRole:
-	// 	 return handleShowMyRoleCallback(h, c, data) // Implement if needed
 
-	// General Callbacks
+	// Existing General Callbacks
 	case tgutil.UniqueCancel:
-		// Use msg
 		_ = c.Respond(&telebot.CallbackResponse{Text: h.msgs.Common.CallbackCancelled})
 		return c.Delete()
 
 	default:
-		log.Printf("Unknown callback unique identifier: %s", unique)
-		// Use msg
-		return c.Respond(&telebot.CallbackResponse{Text: fmt.Sprintf("Unknown action: %s", unique), ShowAlert: true})
+		log.Printf("Unknown callback data format: %s", rawData)
+		return c.Respond(&telebot.CallbackResponse{Text: fmt.Sprintf("Unknown action: %s", rawData), ShowAlert: true})
 	}
 }

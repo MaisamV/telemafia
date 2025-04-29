@@ -12,9 +12,13 @@ const (
 	UniqueDeleteRoomConfirm    = "delete_room_confirm"
 
 	// Game/Assignment related
-	UniqueConfirmAssignments = "confirm_assignments"
-	UniqueShowMyRole         = "show_my_role"
-	UniqueGetInviteLink      = "get_invite_link"
+	UniqueConfirmAssignments       = "confirm_assignments"
+	UniqueShowMyRole               = "show_my_role"
+	UniqueGetInviteLink            = "get_invite_link"
+	UniqueCreateGameSelectRoom     = "cg_room"
+	UniqueCreateGameSelectScenario = "cg_scen"
+	UniqueStartGame                = "cg_start"
+	UniqueCancelGame               = "cancel_cg"
 
 	// Generic Cancel (might need context)
 	UniqueCancel = "cancel"

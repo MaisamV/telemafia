@@ -66,10 +66,20 @@ func (h *AssignRolesHandler) Handle(ctx context.Context, cmd AssignRolesCommand)
 		log.Printf("Error fetching scenario '%s': %v", game.Scenario.ID, err)
 		return nil, fmt.Errorf("error fetching scenario '%s': %w", game.Scenario.ID, err)
 	}
-	roles := scenario.Roles
-	log.Printf("Using %d roles from scenario '%s'", len(roles), game.Scenario.ID)
-	sort.Slice(roles, func(i, j int) bool {
-		return common.Hash(roles[i].Name) < common.Hash(roles[j].Name)
+
+	// Flatten roles from sides into a single list
+	flatRoles := make([]scenarioEntity.Role, 0)
+	for _, side := range scenario.Sides {
+		for _, roleName := range side.Roles {
+			flatRoles = append(flatRoles, scenarioEntity.Role{Name: roleName, Side: side.Name})
+		}
+	}
+
+	log.Printf("Using %d roles from scenario '%s' across %d sides", len(flatRoles), game.Scenario.ID, len(scenario.Sides))
+
+	// Sort the flat list by hash of role name
+	sort.Slice(flatRoles, func(i, j int) bool {
+		return common.Hash(flatRoles[i].Name) < common.Hash(flatRoles[j].Name)
 	})
 
 	// Fetch players from the game's room
@@ -96,15 +106,15 @@ func (h *AssignRolesHandler) Handle(ctx context.Context, cmd AssignRolesCommand)
 	log.Printf("Found %d players in room '%s'", len(users), game.Room.ID)
 
 	// Ensure we have enough roles for the players
-	if len(roles) != len(users) {
-		msg := fmt.Sprintf("role count (%d) does not match player count (%d) for game '%s'", len(roles), len(users), game.ID)
+	if len(flatRoles) != len(users) {
+		msg := fmt.Sprintf("role count (%d) does not match player count (%d) for game '%s'", len(flatRoles), len(users), game.ID)
 		log.Println(msg)
 		return nil, errors.New(msg)
 	}
 
 	// Randomly assign roles to players
-	rolesToAssign := make([]scenarioEntity.Role, len(roles))
-	copy(rolesToAssign, roles)
+	rolesToAssign := make([]scenarioEntity.Role, len(flatRoles))
+	copy(rolesToAssign, flatRoles)
 	// Seed random number generator
 	source := rand.NewSource(time.Now().UnixNano())
 	r := rand.New(source)

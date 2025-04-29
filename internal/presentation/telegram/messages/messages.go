@@ -119,6 +119,18 @@ type GameMessages struct {
 	ListGamesError                      string `json:"list_games_error"`
 	AssignmentsConfirmButton            string `json:"assignments_confirm_button"`
 	AssignmentsConfirmedResponse        string `json:"assignments_confirmed_response"`
+	CreateGameSelectRoomPrompt          string `json:"create_game_select_room_prompt"`
+	CreateGameSelectScenarioPrompt      string `json:"create_game_select_scenario_prompt"`
+	CreateGameConfirmPrompt             string `json:"create_game_confirm_prompt"`
+	CreateGameStartedSuccess            string `json:"create_game_started_success"`
+	CreateGameErrorFetchRooms           string `json:"create_game_error_fetch_rooms"`
+	CreateGameErrorFetchScenarios       string `json:"create_game_error_fetch_scenarios"`
+	CreateGameErrorFetchPlayers         string `json:"create_game_error_fetch_players"`
+	CreateGameErrorFetchScenarioDetails string `json:"create_game_error_fetch_scenario_details"`
+	CreateGameErrorCreatingGame         string `json:"create_game_error_creating_game"`
+	CreateGameErrorAssigningRoles       string `json:"create_game_error_assigning_roles"`
+	CreateGameStartButton               string `json:"create_game_start_button"`
+	CreateGameCancelButton              string `json:"create_game_cancel_button"`
 }
 
 type RefreshMessages struct {

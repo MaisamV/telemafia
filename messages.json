@@ -98,7 +98,19 @@
     "list_games_no_games": "No active games found.",
     "list_games_error": "Error fetching games list: %v",
     "assignments_confirm_button": "Confirm Assignments",
-    "assignments_confirmed_response": "Assignments confirmed for game %s"
+    "assignments_confirmed_response": "Assignments confirmed for game %s",
+    "create_game_select_room_prompt": "Please select the room for the new game:",
+    "create_game_select_scenario_prompt": "Now, select the scenario for room '%s':",
+    "create_game_confirm_prompt": "Game ready in room '%s' with scenario '%s'.\nPlayers:\n%s\n\nRoles:\n%s\n\nPress Start to assign roles.",
+    "create_game_started_success": "Game started! Roles assigned:\n%s",
+    "create_game_error_fetch_rooms": "Error fetching rooms: %v",
+    "create_game_error_fetch_scenarios": "Error fetching scenarios: %v",
+    "create_game_error_fetch_players": "Error fetching players for room: %v",
+    "create_game_error_fetch_scenario_details": "Error fetching scenario details: %v",
+    "create_game_error_creating_game": "Error creating game record: %v",
+    "create_game_error_assigning_roles": "Error assigning roles: %v",
+    "create_game_start_button": "Start Game",
+    "create_game_cancel_button": "Cancel"
   },
   "refresh": {
     "error_prepare": "Error preparing refresh content for chat %d: %v",

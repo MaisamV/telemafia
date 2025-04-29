@@ -158,7 +158,7 @@ func (h *BotHandler) RegisterHandlers() {
 	// TODO: Add /list_scenarios handler
 
 	// Game Handlers
-	h.bot.Handle("/assign_scenario", h.handleAssignScenario) // Assigns scenario AND creates game
+	h.bot.Handle("/create_game", h.handleCreateGame) // Renamed from /assign_scenario
 	h.bot.Handle("/assign_roles", h.handleAssignRoles)
 	h.bot.Handle("/games", h.handleGamesList)
 
@@ -225,8 +225,8 @@ func (h *BotHandler) handleAddScenarioJSON(c telebot.Context) error {
 }
 
 // --- Game ---
-func (h *BotHandler) handleAssignScenario(c telebot.Context) error {
-	return game.HandleAssignScenario(h.getRoomHandler, h.getScenarioByIDHandler, h.addDescriptionHandler, h.createGameHandler, c, h.msgs)
+func (h *BotHandler) handleCreateGame(c telebot.Context) error { // Renamed from handleAssignScenario
+	return game.HandleCreateGame(h.getRoomsHandler, c, h.msgs)
 }
 
 func (h *BotHandler) handleAssignRoles(c telebot.Context) error {
