@@ -164,6 +164,7 @@ func (h *BotHandler) RegisterHandlers() {
 
 	// Register handler for callback queries
 	h.bot.Handle(telebot.OnCallback, h.handleCallback)
+	h.bot.Handle(telebot.OnDocument, h.handleDocument)
 
 	log.Println("Registered command and callback handlers.")
 }
@@ -248,4 +249,8 @@ func (h *BotHandler) handleGamesList(c telebot.Context) error {
 // HandleStart handles the /start command
 func (h *BotHandler) HandleStart(c telebot.Context) error {
 	return HandleStart(h, c, h.msgs)
+}
+
+func (h *BotHandler) handleDocument(c telebot.Context) error {
+	return HandleDocument(h.addScenarioJSONHandler, c, h.msgs)
 }
