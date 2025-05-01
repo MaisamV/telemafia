@@ -21,7 +21,7 @@ func HandleGetInviteLinkCallback(
 	// Construct the deep link
 	// Format: tg://resolve?domain=YourBotUsername&start=join_room-ROOMID
 	payload := fmt.Sprintf("join_room-%s", roomID)
-	inviteLink := fmt.Sprintf("tg://resolve?domain=%s&start=%s", botUsername, payload)
+	inviteLink := fmt.Sprintf("https://t.me/%s?start=%s", botUsername, payload)
 
 	// Respond to the callback privately with the link
 	responseText := fmt.Sprintf(msgs.Room.InviteLinkResponse, inviteLink)
