@@ -97,10 +97,6 @@ func (r *InMemoryGameRepository) CreateGame(game *gameEntity.Game) error {
 	if _, exists := r.games[game.ID]; exists {
 		return fmt.Errorf("game with ID %s already exists", game.ID)
 	}
-	if _, exists := r.roomToGame[game.Room.ID]; exists {
-		// Maybe allow multiple games per room later? For now, enforce 1-1
-		return fmt.Errorf("room %s already has an associated game", game.Room.ID)
-	}
 
 	r.games[game.ID] = game
 	r.roomToGame[game.Room.ID] = game.ID
