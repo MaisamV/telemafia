@@ -49,7 +49,6 @@ func (h *AddScenarioJSONHandler) Handle(ctx context.Context, cmd AddScenarioJSON
 	}
 
 	totalRoles := 0
-	roleNames := make(map[string]bool) // To check for duplicate role names across sides
 
 	for sideIdx, side := range scenario.Sides {
 		if side.Name == "" {
@@ -63,10 +62,6 @@ func (h *AddScenarioJSONHandler) Handle(ctx context.Context, cmd AddScenarioJSON
 			if roleName == "" {
 				return nil, fmt.Errorf("role name cannot be empty (side '%s', role index %d)", side.Name, roleIdx)
 			}
-			if roleNames[roleName] {
-				return nil, fmt.Errorf("duplicate role name found: '%s'", roleName)
-			}
-			roleNames[roleName] = true
 			totalRoles++
 		}
 	}
