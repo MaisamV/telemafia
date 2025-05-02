@@ -35,7 +35,7 @@ func (h *BotHandler) updateMessages(book *tgutil.RefreshingMessageBook, getMessa
 			continue
 		}
 
-		_, editErr := h.bot.Edit(payload.Msg, newContent, newMarkup)
+		_, editErr := h.bot.Edit(payload.Msg, newContent, newMarkup, telebot.NoPreview)
 		if editErr != nil {
 			if strings.Contains(editErr.Error(), "message to edit not found") ||
 				strings.Contains(editErr.Error(), "bot was blocked by the user") {
