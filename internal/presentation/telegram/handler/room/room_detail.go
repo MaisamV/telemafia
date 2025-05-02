@@ -42,8 +42,12 @@ func RoomDetailMessage(
 	}
 
 	playerNames := ""
-	for _, player := range players {
-		playerNames += fmt.Sprintf("@%s\n", player.Username)
+	for i, player := range players {
+		if player.Username != "" {
+			playerNames += fmt.Sprintf("%d - [%s](https://t.me/%s)\n", i+1, player.FirstName, player.Username)
+		} else {
+			playerNames += fmt.Sprintf("%d - %s\n", i+1, player.FirstName)
+		}
 	}
 
 	// Format message with scenario information if available
