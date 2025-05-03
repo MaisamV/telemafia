@@ -195,7 +195,7 @@ func (h *BotHandler) handleLeaveRoom(c telebot.Context) error {
 }
 
 func (h *BotHandler) handleListRooms(c telebot.Context) error {
-	return room.HandleListRooms(h.getRoomsHandler, h.getPlayersInRoomHandler, h.bot, h.roomListRefreshMessage, c, h.msgs)
+	return room.HandleListRooms(h.getRoomsHandler, h.getPlayersInRoomHandler, h.bot, h.roomListRefreshMessage, h.roomDetailRefreshMessage, c, h.msgs)
 }
 
 func (h *BotHandler) handleMyRooms(c telebot.Context) error {

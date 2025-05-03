@@ -49,7 +49,8 @@ func HandleListRooms(
 	getRoomsHandler *roomQuery.GetRoomsHandler,
 	getPlayersInRoomHandler *roomQuery.GetPlayersInRoomHandler,
 	bot *telebot.Bot,
-	refreshingMessage *tgutil.RefreshingMessageBook,
+	roomListBook *tgutil.RefreshingMessageBook,
+	roomDetailBook *tgutil.RefreshingMessageBook,
 	c telebot.Context,
 	msgs *messages.Messages,
 ) error {
@@ -61,11 +62,15 @@ func HandleListRooms(
 
 	message, err := bot.Send(chatID, content, markup)
 	if err == nil {
-		activeMessage, exists := refreshingMessage.GetActiveMessage(c.Sender().ID)
+		activeMessage, exists := roomListBook.GetActiveMessage(c.Sender().ID)
 		if exists {
 			_ = bot.Delete(&telebot.Message{ID: activeMessage.MessageID, Chat: &telebot.Chat{ID: activeMessage.ChatID}})
 		}
-		refreshingMessage.AddActiveMessage(c.Sender().ID, &tgutil.RefreshingMessage{
+		activeMessage, exists = roomDetailBook.GetActiveMessage(c.Sender().ID)
+		if exists {
+			_ = bot.Delete(&telebot.Message{ID: activeMessage.MessageID, Chat: &telebot.Chat{ID: activeMessage.ChatID}})
+		}
+		roomListBook.AddActiveMessage(c.Sender().ID, &tgutil.RefreshingMessage{
 			MessageID: message.ID,
 			ChatID:    message.Chat.ID,
 			Data:      "",
