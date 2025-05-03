@@ -1,7 +1,6 @@
 package telegram
 
 import (
-	"fmt"
 	"log"
 	"strings" // Import messages
 	"telemafia/internal/shared/tgutil"
@@ -12,14 +11,7 @@ import (
 	"gopkg.in/telebot.v3"
 )
 
-// TrackedMessage stores info about a message that needs periodic updates.
-type TrackedMessage struct {
-	Msg         *telebot.Message
-	MessageType tgutil.RefreshingMessageType
-	Data        string // e.g., room ID for RoomDetail
-}
-
-func (h *BotHandler) updateMessages(book *tgutil.RefreshingMessageBook, getMessage func(data string) (string, []interface{}, error)) {
+func (h *BotHandler) updateMessages(book *tgutil.RefreshingMessageBook, getMessage func(user int64, data string) (string, []interface{}, error)) {
 	messagesToUpdate := book.GetAllActiveMessages()
 	if len(messagesToUpdate) == 0 {
 		return
@@ -29,7 +21,7 @@ func (h *BotHandler) updateMessages(book *tgutil.RefreshingMessageBook, getMessa
 	for chatID, payload := range messagesToUpdate {
 		// Prepare the updated message content using the refactored function
 		// Pass the necessary handlers from the BotHandler (h)
-		newContent, newMarkup, err := getMessage(payload.Data)
+		newContent, newMarkup, err := getMessage(chatID, payload.Data)
 		if err != nil {
 			log.Printf(h.msgs.Refresh.ErrorPrepare, chatID, err) // Use msg
 			continue
@@ -56,7 +48,7 @@ func (h *BotHandler) StartRefreshTimer() {
 	defer ticker.Stop()
 	for range ticker.C {
 		if h.roomListRefreshMessage.ConsumeRefreshNeeded() {
-			h.updateMessages(h.roomListRefreshMessage, func(data string) (string, []interface{}, error) {
+			h.updateMessages(h.roomListRefreshMessage, func(user int64, data string) (string, []interface{}, error) {
 				message, markup, err := roomHandler.PrepareRoomListMessage(
 					h.getRoomsHandler,
 					h.getPlayersInRoomHandler,
@@ -70,11 +62,12 @@ func (h *BotHandler) StartRefreshTimer() {
 			})
 		}
 		if h.roomDetailRefreshMessage.ConsumeRefreshNeeded() {
-			h.updateMessages(h.roomDetailRefreshMessage, func(data string) (string, []interface{}, error) {
+			h.updateMessages(h.roomDetailRefreshMessage, func(user int64, data string) (string, []interface{}, error) {
 				message, markup, err := roomHandler.RoomDetailMessage(
 					h.getRoomsHandler,
 					h.getPlayersInRoomHandler,
 					h.msgs, // Pass messages
+					tgutil.IsAdmin(user),
 					data,
 				)
 				opts := []interface{}{
@@ -86,64 +79,4 @@ func (h *BotHandler) StartRefreshTimer() {
 			})
 		}
 	}
-}
-
-// prepareMessageContent generates content based on message type.
-func (h *BotHandler) prepareMessageContent(messageType tgutil.RefreshingMessageType, data string) (string, *telebot.ReplyMarkup, error) {
-	switch messageType {
-	case tgutil.ListRooms:
-		// Call the refactored function, passing messages
-		return roomHandler.PrepareRoomListMessage(h.getRoomsHandler, h.getPlayersInRoomHandler, h.msgs)
-	default:
-		return "", nil, fmt.Errorf("unsupported refreshing message type: %v", messageType)
-	}
-}
-
-// SendOrUpdateRefreshingMessage sends a new message and registers it for refreshing, or updates an existing one.
-func (h *BotHandler) SendOrUpdateRefreshingMessage(userID int64, messageType tgutil.RefreshingMessageType, data string) error {
-	content, markup, err := h.prepareMessageContent(messageType, data)
-	if err != nil {
-		log.Printf(h.msgs.Refresh.ErrorPrepare, userID, messageType, err)                     // Use msg
-		_, sendErr := h.bot.Send(telebot.ChatID(userID), h.msgs.Common.ErrorPreparingContent) // Use msg
-		if sendErr != nil {
-			log.Printf("Failed to send error message to user %d: %v", userID, sendErr)
-		}
-		return err
-	}
-
-	if existingMsg, ok := h.roomListRefreshMessage.GetActiveMessage(userID); ok {
-		updatedMsg, editErr := h.bot.Edit(&telebot.Message{ID: existingMsg.MessageID, Chat: &telebot.Chat{ID: existingMsg.ChatID}}, content, markup)
-		if editErr == nil {
-			log.Printf(fmt.Sprintf("%d : %d", existingMsg.MessageID, updatedMsg.ID))
-			h.roomListRefreshMessage.AddActiveMessage(userID, &tgutil.RefreshingMessage{
-				MessageID: updatedMsg.ID,
-				ChatID:    updatedMsg.Chat.ID,
-				Data:      data,
-			})
-			log.Printf(h.msgs.Refresh.LogUpdateSuccess, userID) // Use msg
-			return nil
-		}
-		log.Printf(h.msgs.Refresh.LogEditFailSendingNew, existingMsg.MessageID, userID, editErr) // Use msg
-		h.roomListRefreshMessage.RemoveActiveMessage(userID)
-	}
-
-	msg, sendErr := h.bot.Send(telebot.ChatID(userID), content, markup)
-	if sendErr != nil {
-		log.Printf(h.msgs.Refresh.ErrorSendNew, userID, sendErr) // Use msg
-		return sendErr
-	}
-
-	h.roomListRefreshMessage.AddActiveMessage(userID, &tgutil.RefreshingMessage{
-		MessageID: msg.ID,
-		ChatID:    msg.Chat.ID,
-		Data:      data,
-	})
-	log.Printf(h.msgs.Refresh.LogSendNewSuccess, msg.ID, userID) // Use msg
-	return nil
-}
-
-// RemoveRefreshingChat removes a chat from the refreshing list via RefreshingMessageBook.
-func (h *BotHandler) RemoveRefreshingChat(userID int64) {
-	h.roomListRefreshMessage.RemoveActiveMessage(userID)
-	log.Printf(h.msgs.Refresh.LogRemovedUser, userID) // Use msg
 }

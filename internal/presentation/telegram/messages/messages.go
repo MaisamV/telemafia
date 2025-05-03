@@ -27,12 +27,12 @@ type RoomMessages struct {
 	CreatePrompt                string `json:"create_prompt"`
 	CreateSuccess               string `json:"create_success"`
 	CreateError                 string `json:"create_error"`
+	RoomDetail                  string `json:"room_detail"`
+	RoomDetailWithScenario      string `json:"room_detail_with_scenario"`
 	JoinPrompt                  string `json:"join_prompt"`
 	JoinSuccess                 string `json:"join_success"`
 	JoinError                   string `json:"join_error"`
 	JoinButtonText              string `json:"join_button_text"`
-	RoomDetail                  string `json:"room_detail"`
-	RoomDetailWithScenario      string `json:"room_detail_with_scenario"`
 	LeavePrompt                 string `json:"leave_prompt"`
 	LeaveSuccess                string `json:"leave_success"`
 	LeaveError                  string `json:"leave_error"`
@@ -50,7 +50,7 @@ type RoomMessages struct {
 	RoomNotFound                string `json:"RoomNotFound"`
 	InviteLinkButton            string `json:"InviteLinkButton"`
 	InviteLinkResponse          string `json:"InviteLinkResponse"`
-	KickPrompt                  string `json:"kick_prompt"`
+	KickPrompt                  string `json:"KickPrompt"`
 	KickInvalidUserID           string `json:"kick_invalid_user_id"`
 	KickSuccess                 string `json:"kick_success"`
 	KickError                   string `json:"kick_error"`
@@ -80,12 +80,6 @@ type ScenarioMessages struct {
 	DeletePrompt                   string `json:"delete_prompt"`
 	DeleteSuccess                  string `json:"delete_success"`
 	DeleteError                    string `json:"delete_error"`
-	AddRolePrompt                  string `json:"add_role_prompt"`
-	AddRoleSuccess                 string `json:"add_role_success"`
-	AddRoleError                   string `json:"add_role_error"`
-	RemoveRolePrompt               string `json:"remove_role_prompt"`
-	RemoveRoleSuccess              string `json:"remove_role_success"`
-	RemoveRoleError                string `json:"remove_role_error"`
 	AddScenarioJSONPrompt          string `json:"add_scenario_json_prompt"`
 	AddScenarioJSONSuccess         string `json:"add_scenario_json_success"`
 	AddScenarioJSONInvalidJSON     string `json:"add_scenario_json_invalid_json"`
@@ -94,12 +88,11 @@ type ScenarioMessages struct {
 }
 
 type GameMessages struct {
-	AssignScenarioPrompt                string `json:"assign_scenario_prompt"`
 	AssignScenarioSuccess               string `json:"assign_scenario_success"`
 	AssignScenarioErrorRoomFind         string `json:"assign_scenario_error_room_find"`
-	AssignScenarioErrorRoomNotfound     string `json:"assign_scenario_error_room_notfound"`
+	AssignScenarioErrorRoomNotFound     string `json:"assign_scenario_error_room_notfound"`
 	AssignScenarioErrorScenarioFind     string `json:"assign_scenario_error_scenario_find"`
-	AssignScenarioErrorScenarioNotfound string `json:"assign_scenario_error_scenario_notfound"`
+	AssignScenarioErrorScenarioNotFound string `json:"assign_scenario_error_scenario_notfound"`
 	AssignScenarioErrorUpdateRoom       string `json:"assign_scenario_error_update_room"`
 	AssignScenarioErrorGameCreate       string `json:"assign_scenario_error_game_create"`
 	AssignRolesPrompt                   string `json:"assign_roles_prompt"`
@@ -131,6 +124,19 @@ type GameMessages struct {
 	CreateGameErrorAssigningRoles       string `json:"create_game_error_assigning_roles"`
 	CreateGameStartButton               string `json:"create_game_start_button"`
 	CreateGameCancelButton              string `json:"create_game_cancel_button"`
+	SelectRoomPrompt                    string `json:"SelectRoomPrompt"`
+	SelectRoomButton                    string `json:"SelectRoomButton"`
+	GameCreatedSuccess                  string `json:"GameCreatedSuccess"`
+	GameAlreadyExists                   string `json:"GameAlreadyExists"`
+	AssignRolesButton                   string `json:"AssignRolesButton"`
+	RolesAssignedSuccess                string `json:"RolesAssignedSuccess"`
+	RoleAssignmentPM                    string `json:"RoleAssignmentPM"`
+	ErrorAssignRolesPlayerCount         string `json:"ErrorAssignRolesPlayerCount"`
+	ErrorAssignRolesNoScenario          string `json:"ErrorAssignRolesNoScenario"`
+	ErrorAssignRolesGameNotFound        string `json:"ErrorAssignRolesGameNotFound"`
+	StartButton                         string `json:"StartButton"`
+	ListGames                           string `json:"ListGames"`
+	NoActiveGames                       string `json:"NoActiveGames"`
 }
 
 type RefreshMessages struct {

@@ -1,6 +1,7 @@
 package tgutil
 
 import (
+	"strconv"
 	"strings"
 
 	sharedEntity "telemafia/internal/shared/entity"
@@ -8,7 +9,7 @@ import (
 	"gopkg.in/telebot.v3"
 )
 
-var adminUsernames []string
+var adminIds []int64
 
 // --- Refresh Logic (potentially move to its own package/file later) ---
 
@@ -27,17 +28,21 @@ type Updater interface {
 // SetAdminUsers stores the list of admin usernames.
 // NOTE: This uses a package-level variable, which isn't ideal for testing.
 // Consider injecting a config or admin checker service instead in a real app.
-func SetAdminUsers(usernames []string) {
-	adminUsernames = usernames
+func SetAdminUsers(idList []string) {
+	adminIds = make([]int64, len(idList))
+	for _, idString := range idList {
+		id, err := strconv.ParseInt(idString, 10, 64)
+		if err != nil {
+			panic("Cannot parse admin IDs")
+		}
+		adminIds = append(adminIds, id)
+	}
 }
 
 // IsAdmin checks if a given username is in the configured admin list.
-func IsAdmin(username string) bool {
-	if username == "" {
-		return false
-	}
-	for _, admin := range adminUsernames {
-		if strings.EqualFold(username, admin) { // Case-insensitive check for admin username
+func IsAdmin(id int64) bool {
+	for _, admin := range adminIds {
+		if id == admin {
 			return true
 		}
 	}
@@ -49,7 +54,7 @@ func ToUser(sender *telebot.User) *sharedEntity.User {
 	if sender == nil {
 		return nil
 	}
-	isAdmin := IsAdmin(sender.Username)
+	isAdmin := IsAdmin(sender.ID)
 	return &sharedEntity.User{
 		ID:         sharedEntity.UserID(sender.ID), // Assuming UserID is based on Telegram ID
 		TelegramID: sender.ID,

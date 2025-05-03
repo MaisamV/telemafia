@@ -185,7 +185,7 @@ func HandleJoinRoomCallback(
 	roomList.RaiseRefreshNeeded()
 	roomDetail.RaiseRefreshNeeded()
 	_ = c.Respond(&telebot.CallbackResponse{Text: msgs.Room.JoinSuccess})
-	message, markup, err := RoomDetailMessage(getRoomsHandler, getPlayersInRoomHandler, msgs, data)
+	message, markup, err := RoomDetailMessage(getRoomsHandler, getPlayersInRoomHandler, msgs, user.Admin, data)
 	if err != nil {
 		return err
 	}
