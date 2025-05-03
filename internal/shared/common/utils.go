@@ -3,7 +3,9 @@ package common
 import (
 	"crypto/sha256"
 	"errors"
+	"math/rand"
 	"strconv"
+	"time"
 )
 
 // Contains checks if a string is in a slice
@@ -30,4 +32,16 @@ func Hash(s string) string {
 	h := sha256.New()
 	h.Write([]byte(s))
 	return string(h.Sum(nil))
+}
+
+var r *rand.Rand
+
+func InitSeed() {
+	// Seed random number generator
+	source := rand.NewSource(time.Now().UnixNano())
+	r = rand.New(source)
+}
+
+func Shuffle(n int, swap func(i, j int)) {
+	r.Shuffle(n, swap)
 }

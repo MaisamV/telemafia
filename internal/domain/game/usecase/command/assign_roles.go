@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math/rand"
 	"sort"
 	gameEntity "telemafia/internal/domain/game/entity"
 	gamePort "telemafia/internal/domain/game/port"
@@ -14,7 +13,6 @@ import (
 	scenarioPort "telemafia/internal/domain/scenario/port"
 	"telemafia/internal/shared/common"
 	sharedEntity "telemafia/internal/shared/entity"
-	"time"
 )
 
 // AssignRolesCommand represents a command to assign roles to players in a game
@@ -100,6 +98,10 @@ func (h *AssignRolesHandler) Handle(ctx context.Context, cmd AssignRolesCommand)
 			users = append(users, *p)
 		}
 	}
+	// Sort the flat list by hash of role name
+	sort.Slice(flatRoles, func(i, j int) bool {
+		return common.Hash(flatRoles[i].Name) < common.Hash(flatRoles[j].Name)
+	})
 	sort.Slice(users, func(i, j int) bool {
 		return users[i].ID < users[j].ID
 	})
@@ -115,10 +117,8 @@ func (h *AssignRolesHandler) Handle(ctx context.Context, cmd AssignRolesCommand)
 	// Randomly assign roles to players
 	rolesToAssign := make([]scenarioEntity.Role, len(flatRoles))
 	copy(rolesToAssign, flatRoles)
-	// Seed random number generator
-	source := rand.NewSource(time.Now().UnixNano())
-	r := rand.New(source)
-	r.Shuffle(len(rolesToAssign), func(i, j int) {
+
+	common.Shuffle(len(rolesToAssign), func(i, j int) {
 		rolesToAssign[i], rolesToAssign[j] = rolesToAssign[j], rolesToAssign[i]
 	})
 

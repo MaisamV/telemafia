@@ -14,6 +14,7 @@ import (
 	scenarioQuery "telemafia/internal/domain/scenario/usecase/query"
 	telegramHandler "telemafia/internal/presentation/telegram/handler"
 	messages "telemafia/internal/presentation/telegram/messages"
+	"telemafia/internal/shared/common"
 	"telemafia/internal/shared/event"
 	"time"
 
@@ -59,6 +60,8 @@ func main() {
 
 // initializeDependencies sets up and wires all components
 func initializeDependencies(cfg *config.Config, msgs *messages.Messages) (*telegramHandler.BotHandler, error) {
+
+	common.InitSeed()
 	// Initialize Telegram Bot
 	botSettings := telebot.Settings{
 		Token:  cfg.TelegramBotToken,
