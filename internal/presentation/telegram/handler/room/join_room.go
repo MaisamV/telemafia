@@ -58,7 +58,7 @@ func HandleJoinRoom(
 	if err != nil {
 		return err
 	}
-	msg, err := c.Bot().Send(c.Sender(), message, markup, telebot.NoPreview)
+	msg, err := c.Bot().Send(c.Sender(), message, markup, telebot.ModeMarkdown, telebot.NoPreview)
 	roomDetail.AddActiveMessage(chatID, &tgutil.RefreshingMessage{
 		Msg:  msg,
 		Data: string(roomID),

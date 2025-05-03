@@ -19,7 +19,7 @@ type TrackedMessage struct {
 	Data        string // e.g., room ID for RoomDetail
 }
 
-func (h *BotHandler) updateMessages(book *tgutil.RefreshingMessageBook, getMessage func(data string) (string, *telebot.ReplyMarkup, error)) {
+func (h *BotHandler) updateMessages(book *tgutil.RefreshingMessageBook, getMessage func(data string) (string, []interface{}, error)) {
 	messagesToUpdate := book.GetAllActiveMessages()
 	if len(messagesToUpdate) == 0 {
 		return
@@ -56,22 +56,33 @@ func (h *BotHandler) StartRefreshTimer() {
 	defer ticker.Stop()
 	for range ticker.C {
 		if h.roomListRefreshMessage.ConsumeRefreshNeeded() {
-			h.updateMessages(h.roomListRefreshMessage, func(data string) (string, *telebot.ReplyMarkup, error) {
-				return roomHandler.PrepareRoomListMessage(
+			h.updateMessages(h.roomListRefreshMessage, func(data string) (string, []interface{}, error) {
+				message, markup, err := roomHandler.PrepareRoomListMessage(
 					h.getRoomsHandler,
 					h.getPlayersInRoomHandler,
 					h.msgs, // Pass messages
 				)
+				opts := []interface{}{
+					markup,
+					telebot.NoPreview,
+				}
+				return message, opts, err
 			})
 		}
 		if h.roomDetailRefreshMessage.ConsumeRefreshNeeded() {
-			h.updateMessages(h.roomDetailRefreshMessage, func(data string) (string, *telebot.ReplyMarkup, error) {
-				return roomHandler.RoomDetailMessage(
+			h.updateMessages(h.roomDetailRefreshMessage, func(data string) (string, []interface{}, error) {
+				message, markup, err := roomHandler.RoomDetailMessage(
 					h.getRoomsHandler,
 					h.getPlayersInRoomHandler,
 					h.msgs, // Pass messages
 					data,
 				)
+				opts := []interface{}{
+					markup,
+					telebot.ModeMarkdown,
+					telebot.NoPreview,
+				}
+				return message, opts, err
 			})
 		}
 	}

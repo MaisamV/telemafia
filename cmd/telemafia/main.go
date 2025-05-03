@@ -61,9 +61,8 @@ func main() {
 func initializeDependencies(cfg *config.Config, msgs *messages.Messages) (*telegramHandler.BotHandler, error) {
 	// Initialize Telegram Bot
 	botSettings := telebot.Settings{
-		Token:     cfg.TelegramBotToken,
-		Poller:    &telebot.LongPoller{Timeout: 10 * time.Second},
-		ParseMode: telebot.ModeMarkdown,
+		Token:  cfg.TelegramBotToken,
+		Poller: &telebot.LongPoller{Timeout: 10 * time.Second},
 	}
 
 	telegramBot, err := telebot.NewBot(botSettings)
