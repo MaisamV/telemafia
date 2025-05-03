@@ -2,8 +2,6 @@ package tgutil
 
 import (
 	"sync"
-
-	"gopkg.in/telebot.v3"
 )
 
 // RefreshingMessageBook manages the state for dynamic message refreshing.
@@ -16,8 +14,9 @@ type RefreshingMessageBook struct {
 }
 
 type RefreshingMessage struct {
-	Msg  *telebot.Message
-	Data string
+	ChatID    int64
+	MessageID int
+	Data      string
 }
 
 // NewRefreshState creates a new RefreshingMessageBook manager.

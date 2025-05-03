@@ -63,11 +63,12 @@ func HandleListRooms(
 	if err == nil {
 		activeMessage, exists := refreshingMessage.GetActiveMessage(c.Sender().ID)
 		if exists {
-			_ = bot.Delete(activeMessage.Msg)
+			_ = bot.Delete(&telebot.Message{ID: activeMessage.MessageID, Chat: &telebot.Chat{ID: activeMessage.ChatID}})
 		}
 		refreshingMessage.AddActiveMessage(c.Sender().ID, &tgutil.RefreshingMessage{
-			Msg:  message,
-			Data: "",
+			MessageID: message.ID,
+			ChatID:    message.Chat.ID,
+			Data:      "",
 		})
 	}
 	return err

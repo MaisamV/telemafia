@@ -35,7 +35,7 @@ func (h *BotHandler) updateMessages(book *tgutil.RefreshingMessageBook, getMessa
 			continue
 		}
 
-		_, editErr := h.bot.Edit(payload.Msg, newContent, newMarkup, telebot.NoPreview)
+		_, editErr := h.bot.Edit(&telebot.Message{ID: payload.MessageID, Chat: &telebot.Chat{ID: payload.ChatID}}, newContent, newMarkup...)
 		if editErr != nil {
 			if strings.Contains(editErr.Error(), "message to edit not found") ||
 				strings.Contains(editErr.Error(), "bot was blocked by the user") {
@@ -112,17 +112,18 @@ func (h *BotHandler) SendOrUpdateRefreshingMessage(userID int64, messageType tgu
 	}
 
 	if existingMsg, ok := h.roomListRefreshMessage.GetActiveMessage(userID); ok {
-		updatedMsg, editErr := h.bot.Edit(existingMsg.Msg, content, markup)
+		updatedMsg, editErr := h.bot.Edit(&telebot.Message{ID: existingMsg.MessageID, Chat: &telebot.Chat{ID: existingMsg.ChatID}}, content, markup)
 		if editErr == nil {
-			log.Printf(fmt.Sprintf("%d : %d", existingMsg.Msg.ID, updatedMsg.ID))
+			log.Printf(fmt.Sprintf("%d : %d", existingMsg.MessageID, updatedMsg.ID))
 			h.roomListRefreshMessage.AddActiveMessage(userID, &tgutil.RefreshingMessage{
-				Msg:  updatedMsg,
-				Data: data,
+				MessageID: updatedMsg.ID,
+				ChatID:    updatedMsg.Chat.ID,
+				Data:      data,
 			})
 			log.Printf(h.msgs.Refresh.LogUpdateSuccess, userID) // Use msg
 			return nil
 		}
-		log.Printf(h.msgs.Refresh.LogEditFailSendingNew, existingMsg.Msg.ID, userID, editErr) // Use msg
+		log.Printf(h.msgs.Refresh.LogEditFailSendingNew, existingMsg.MessageID, userID, editErr) // Use msg
 		h.roomListRefreshMessage.RemoveActiveMessage(userID)
 	}
 
@@ -133,8 +134,9 @@ func (h *BotHandler) SendOrUpdateRefreshingMessage(userID int64, messageType tgu
 	}
 
 	h.roomListRefreshMessage.AddActiveMessage(userID, &tgutil.RefreshingMessage{
-		Msg:  msg,
-		Data: data,
+		MessageID: msg.ID,
+		ChatID:    msg.Chat.ID,
+		Data:      data,
 	})
 	log.Printf(h.msgs.Refresh.LogSendNewSuccess, msg.ID, userID) // Use msg
 	return nil

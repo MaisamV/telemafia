@@ -49,8 +49,9 @@ func HandleJoinRoom(
 	roomMessage, roomExists := roomList.GetActiveMessage(chatID)
 	roomList.RemoveActiveMessage(chatID)
 	roomDetail.AddActiveMessage(chatID, &tgutil.RefreshingMessage{
-		Msg:  c.Message(),
-		Data: string(roomID),
+		MessageID: c.Message().ID,
+		ChatID:    c.Message().Chat.ID,
+		Data:      string(roomID),
 	})
 	roomList.RaiseRefreshNeeded()
 	roomDetail.RaiseRefreshNeeded()
@@ -60,14 +61,15 @@ func HandleJoinRoom(
 	}
 	msg, err := c.Bot().Send(c.Sender(), message, markup, telebot.ModeMarkdown, telebot.NoPreview)
 	roomDetail.AddActiveMessage(chatID, &tgutil.RefreshingMessage{
-		Msg:  msg,
-		Data: string(roomID),
+		MessageID: msg.ID,
+		ChatID:    msg.Chat.ID,
+		Data:      string(roomID),
 	})
 	if listExists {
-		_ = c.Bot().Delete(listMessage.Msg)
+		_ = c.Bot().Delete(&telebot.Message{ID: listMessage.MessageID, Chat: &telebot.Chat{ID: listMessage.ChatID}})
 	}
 	if roomExists {
-		_ = c.Bot().Delete(roomMessage.Msg)
+		_ = c.Bot().Delete(&telebot.Message{ID: roomMessage.MessageID, Chat: &telebot.Chat{ID: roomMessage.ChatID}})
 	}
 	return err
 }

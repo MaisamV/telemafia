@@ -53,8 +53,9 @@ func HandleLeaveRoomSelectCallback(
 	chatID := c.Sender().ID
 	roomDetail.RemoveActiveMessage(chatID)
 	roomList.AddActiveMessage(chatID, &tgutil.RefreshingMessage{
-		Msg:  c.Message(),
-		Data: string(roomID),
+		MessageID: c.Message().ID,
+		ChatID:    c.Message().Chat.ID,
+		Data:      string(roomID),
 	})
 	roomList.RaiseRefreshNeeded()
 	roomDetail.RaiseRefreshNeeded()
@@ -177,8 +178,9 @@ func HandleJoinRoomCallback(
 	chatID := c.Sender().ID
 	roomList.RemoveActiveMessage(chatID)
 	roomDetail.AddActiveMessage(chatID, &tgutil.RefreshingMessage{
-		Msg:  c.Message(),
-		Data: string(roomID),
+		MessageID: c.Message().ID,
+		ChatID:    c.Message().Chat.ID,
+		Data:      string(roomID),
 	})
 	roomList.RaiseRefreshNeeded()
 	roomDetail.RaiseRefreshNeeded()
