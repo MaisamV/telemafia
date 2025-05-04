@@ -9,8 +9,8 @@
 *   **Role:** Acts as the central orchestrator for the Telegram presentation layer.
 *   **Dependencies:** Receives the `telebot.Bot` instance, admin usernames, loaded `messages.Messages`, and *all* domain use case handlers (commands and queries) via constructor injection (`NewBotHandler`).
 *   **Refresh State:** Holds instances of `tgutil.RefreshingMessageBook` (e.g., `roomListRefreshMessage`, `roomDetailRefreshMessage`) to manage dynamic message updates.
-*   **`RegisterHandlers()`:** Maps Telegram commands (e.g., `/create_room`) and events (e.g., `telebot.OnCallback`, `telebot.OnDocument`) to specific *dispatcher methods* on the `BotHandler` struct (e.g., `h.handleCreateRoom`).
-*   **Dispatcher Methods (e.g., `handleCreateRoom`, `handleCallback`, `handleDocument`):** These methods primarily act as routers. They parse necessary information from the `telebot.Context` (like payload, sender) and call the corresponding **exported handler functions** located in sub-packages (e.g., `room.HandleCreateRoom`, `scenario.HandleAddScenarioJSON`) or other handler files (`callbacks.go`, `document_handler.go`), passing the required dependencies (use case handlers, notifiers, messages) from the `BotHandler` instance (`h`).
+*   **`RegisterHandlers()`:** Maps Telegram commands (e.g., `/create_room`, `/create_game`) and events (e.g., `telebot.OnCallback`, `telebot.OnDocument`) to specific *dispatcher methods* on the `BotHandler` struct (e.g., `h.handleCreateRoom`, `h.handleCreateGame`).
+*   **Dispatcher Methods (e.g., `handleCreateRoom`, `handleCallback`, `handleDocument`, `handleCreateGame`):** These methods primarily act as routers. They parse necessary information from the `telebot.Context` (like payload, sender) and call the corresponding **exported handler functions** located in sub-packages (e.g., `room.HandleCreateRoom`, `game.HandleCreateGame`) or other handler files (`callbacks.go`, `document_handler.go`), passing the required dependencies (use case handlers, notifiers, messages) from the `BotHandler` instance (`h`).
 *   **`Start()`:** Initializes background tasks (like the refresh timer) and starts the `telebot` polling loop.
 
 ## 2. `handler/callbacks.go` (`BotHandler.handleCallback`)
@@ -20,7 +20,7 @@
     1.  Retrieves the callback data.
     2.  Uses `tgutil.SplitCallbackData` to separate the `unique` identifier and the `payload`.
     3.  Uses a `switch` statement on the `unique` identifier.
-    4.  Each `case` corresponds to a specific button type (defined in `tgutil/const.go`).
+    4.  Each `case` corresponds to a specific button type (defined in `tgutil/const.go`, e.g., `tgutil.UniqueCreateGameSelectRoom`, `tgutil.UniqueCreateGameSelectScenario`, `tgutil.UniqueCreateGameStart`, `tgutil.UniqueCreateGameCancel`).
     5.  Calls the relevant **exported handler function** from the appropriate sub-package (e.g., `room.HandleJoinRoomCallback`, `game.HandleSelectRoomForCreateGame`), passing the `telebot.Context`, parsed `payload`, and necessary dependencies (use case handlers, notifiers, messages) obtained from the `BotHandler` (`h`).
 
 ## 3. `handler/refresh.go`
@@ -32,11 +32,14 @@
     2.  If needed, calls `h.updateMessages()` for that book.
 *   **`BotHandler.updateMessages()`:**
     1.  Gets all active messages tracked by the specific `RefreshingMessageBook`.
-    2.  For each message, calls a **message preparation function** (e.g., `room.PrepareRoomListMessage`) to get the latest content and markup.
-    3.  Uses `h.bot.Edit()` to update the message in Telegram.
+    2.  For each message, calls a **message preparation function** (e.g., `room.PrepareRoomListMessage`, `room.RoomDetailMessage`) to get the latest content and markup.
+        *   **Note:** As message preparation functions may require user context (e.g., admin status) for conditional elements, the refresh mechanism may not display these elements correctly since it lacks the original user context.
+    3.  Uses `h.bot.Edit()` to update the message in Telegram (using `ModeMarkdownV2`).
     4.  Handles errors (e.g., message not found, user blocked bot) and removes the message from tracking if necessary.
 *   **`BotHandler.SendOrUpdateRefreshingMessage()`:** Utility used by handlers (like `HandleListRooms`) to either send a new dynamic message and track it, or edit an existing tracked message.
 *   **Message Preparation Functions (e.g., `room.PrepareRoomListMessage`, `room.RoomDetailMessage`):** Exported functions (located in handler sub-packages like `room/`) responsible for fetching current data (using injected query handlers) and formatting the message text and `telebot.ReplyMarkup`.
+    *   These functions may accept additional parameters, such as the requesting user's admin status (as seen in `RoomDetailMessage`), to render conditional UI elements like admin-only buttons.
+    *   `RoomDetailMessage`: Now always uses the `msgs.Room.RoomDetail` format string (doesn't differentiate based on scenario presence) and formats the player list using `user.GetProfileLink()`.
 
 ## 4. `handler/<module>/` (e.g., `handler/room/`, `handler/game/`)
 
@@ -52,10 +55,19 @@
     4.  Create domain Command/Query structs.
     5.  Call the appropriate injected domain use case handler (`handler.Handle(...)`).
     6.  Process results/errors.
-    7.  Send responses/edit messages using `c.Send()`, `c.Edit()`, `c.Respond()`, utilizing the injected `msgs` struct for all user-facing text.
-    8.  If state relevant to a dynamic message was changed, call `notifier.RaiseRefreshNeeded()`.
-    9.  If a new dynamic message is sent, track it using `notifier.AddActiveMessage()`.
-    10. If a dynamic message becomes invalid, untrack it using `notifier.RemoveActiveMessage()`.
+    7.  Prepare response content by calling appropriate **message preparation functions** (e.g., `RoomDetailMessage`), passing necessary context like user admin status if required by the preparation function.
+    8.  Send responses/edit messages using `c.Send()`, `c.Edit()`, `c.Respond()` (typically with `telebot.ModeMarkdownV2`), utilizing the injected `msgs` struct for text and the markup from preparation functions.
+    9.  If state relevant to a dynamic message was changed, call `notifier.RaiseRefreshNeeded()`.
+    10. If a new dynamic message is sent, track it using `notifier.AddActiveMessage()`.
+    11. If a dynamic message becomes invalid, untrack it using `notifier.RemoveActiveMessage()`.
+*   **Specific Handlers:**
+    *   `room.HandleJoinRoomCallback`: Handles the join button press. Calls `JoinRoom` use case, updates refresh state, calls `room.RoomDetailMessage`, and edits the message using `ModeMarkdownV2`.
+    *   `game.HandleCreateGame`: Initiates the interactive game creation flow (admin only). Sends a message prompting for room selection.
+    *   `game.HandleSelectRoomForCreateGame`: Callback handler for room selection. Sends a message prompting for scenario selection.
+    *   `game.HandleSelectScenarioForCreateGame`: Callback handler for scenario selection. Fetches data, presents confirmation message (`msgs.Game.CreateGameConfirmPrompt` with role list), with "Start" and "Cancel" buttons. Uses `ModeMarkdownV2`.
+    *   `game.HandleStartGameCallback`: Callback handler for the "Start" button. Calls `AssignRoles`, sends role info via PM (using `msgs.Game.AssignRolesSuccessPrivate` with role name and side, using `ModeMarkdownV2`), then edits the original message (`msgs.Game.CreateGameStartedSuccess` with user profile links and roles). Uses `ModeMarkdownV2`.
+    *   `game.HandleCancelGameCreationCallback`: Callback handler for the "Cancel" button. Edits message to show cancellation.
+    *   `game.HandleAssignRoles`: Handles the `/assign_roles` command (likely becoming obsolete due to the interactive flow). Iterates over the returned assignment map (`map[User]Role`) and sends private messages.
 
 ## 5. `handler/document_handler.go`
 
@@ -69,9 +81,7 @@
 
 ## 6. `messages/`
 
-*   **`messages.json` (Root directory):** Contains all user-facing strings organized by category (common, room, game, etc.) using nested JSON objects.
-*   **`messages.go`:** Defines the Go struct (`Messages` and nested structs like `RoomMessages`, `GameMessages`, etc.) that mirrors the structure of `messages.json`. Uses `json` tags for unmarshalling.
-*   **`loader.go`:**
-    *   **`LoadMessages(filename string) (*Messages, error)`:** Reads the specified JSON file, unmarshals the data into the `Messages` struct, performs optional basic validation, and returns the populated struct.
-    *   Called once during startup in `main.go`.
-*   **Usage:** The loaded `*Messages` struct is injected into the `BotHandler` and passed down to the exported handler functions, which access strings via struct fields (e.g., `msgs.Room.CreateSuccess`, `fmt.Sprintf(msgs.Common.ErrorGeneric, err)`). 
+*   **`messages.json` (Root directory):** Contains user-facing strings. Text for game creation flow, role assignment PMs, and room details updated (primarily Farsi translations and formatting, including MarkdownV2 syntax like `||` for spoilers and escaped characters `\\`).
+*   **`messages.go`:** Defines the Go struct mirroring `messages.json`.
+*   **`loader.go`:** Loads messages from JSON.
+*   **Usage:** Injected `*Messages` struct used throughout handlers. 

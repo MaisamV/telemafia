@@ -38,10 +38,11 @@ Defines interfaces required by the Game domain.
         *   Fetches `Game`, `Scenario`, and Players (via `RoomReader` using `Game.Room.ID`).
         *   Validates player count matches role count from the scenario.
         *   Flattens roles from the `Scenario` struct.
-        *   Randomly shuffles roles and assigns them to sorted players (by UserID).
+        *   Uses `common.Shuffle` to randomize the order of the flattened roles.
+        *   Assigns the shuffled roles to sorted players (by UserID).
         *   Updates the `Game.Assignments` map and sets `Game.State` to `GameStateRolesAssigned`.
         *   Calls `GameRepository.UpdateGame`.
-        *   Returns the `map[UserID]Role` assignments.
+        *   Returns the assignments map `map[sharedEntity.User]scenarioEntity.Role` (Note: key is the `User` struct).
 *   **`create_game.go`:**
     *   `CreateGameCommand`: Contains `Requester`, `RoomID`, `ScenarioID`.
     *   `CreateGameHandler`: Depends on `GameRepository`, `RoomClient`, `ScenarioClient`.

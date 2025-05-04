@@ -8,11 +8,12 @@
 
 The `main` function in `cmd/telemafia/main.go` acts as the **Composition Root**. It performs the following steps:
 
-1.  **Load Configuration:** Reads settings (Bot Token, Admin Usernames) from `config.json` or command-line flags using `config.LoadConfig`.
-2.  **Load Messages:** Reads user-facing text from `messages.json` using `messages.LoadMessages`.
-3.  **Initialize Dependencies:** Calls the `initializeDependencies` function to create and connect all necessary components.
-4.  **Register Handlers:** Calls `botHandler.RegisterHandlers()` to map Telegram commands and callbacks to their respective handler methods.
-5.  **Start Bot:** Calls `botHandler.Start()` to begin the bot's polling loop and background tasks (like message refreshing).
+1.  **Initialize Random Seed:** Calls `common.InitSeed()` to ensure randomness for features like role shuffling.
+2.  **Load Configuration:** Reads settings (Bot Token, Admin Usernames) from `config.json` or command-line flags using `config.LoadConfig`.
+3.  **Load Messages:** Reads user-facing text from `messages.json` using `messages.LoadMessages`.
+4.  **Initialize Dependencies:** Calls the `initializeDependencies` function to create and connect all necessary components.
+5.  **Register Handlers:** Calls `botHandler.RegisterHandlers()` to map Telegram commands and callbacks to their respective handler methods.
+6.  **Start Bot:** Calls `botHandler.Start()` to begin the bot's polling loop and background tasks (like message refreshing).
 
 ## 2. `initializeDependencies` Function
 
