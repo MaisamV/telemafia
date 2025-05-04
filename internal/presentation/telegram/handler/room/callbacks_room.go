@@ -220,10 +220,6 @@ func HandleKickUserSelectCallback(
 	playersToKickCount := 0
 
 	for _, player := range players {
-		// Don't list the admin themself
-		if player.ID == requester.ID {
-			continue
-		}
 		playersToKickCount++
 		// Create payload: roomID|userIDToKick
 		payload := fmt.Sprintf("%s|%d", roomIDStr, player.ID)
