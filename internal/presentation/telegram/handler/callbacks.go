@@ -58,6 +58,12 @@ func (h *BotHandler) handleCallback(c telebot.Context) error {
 	case tgutil.UniqueGetInviteLink:
 		return room.HandleGetInviteLinkCallback(h.bot, c, data, h.msgs)
 
+	// Kick User Flow Callbacks
+	case tgutil.UniqueKickUserSelect:
+		return room.HandleKickUserSelectCallback(h.getPlayersInRoomHandler, c, data, h.msgs)
+	case tgutil.UniqueKickUserConfirm:
+		return room.HandleKickUserConfirmCallback(h.kickUserHandler, h.getRoomsHandler, h.getPlayersInRoomHandler, h.roomListRefreshMessage, h.roomDetailRefreshMessage, c, data, h.msgs)
+
 	// Existing Game Callbacks
 	case tgutil.UniqueConfirmAssignments:
 		return game.HandleConfirmAssignments(h.getGameByIDHandler, c, data, h.msgs)

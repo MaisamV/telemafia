@@ -20,6 +20,10 @@ const (
 	UniqueStartGame                = "cg_start"
 	UniqueCancelGame               = "cancel_cg"
 
+	// Kick User Flow
+	UniqueKickUserSelect  = "kick_user_select"  // Shows the list of users to kick
+	UniqueKickUserConfirm = "kick_user_confirm" // Confirms kicking the selected user
+
 	// Generic Cancel (might need context)
 	UniqueCancel = "cancel"
 )

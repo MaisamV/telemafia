@@ -59,7 +59,13 @@
     "list_error_prepare": "Error preparing room list: %v",
     "my_rooms_title": "Rooms you are in:\n- %s (%s)\n",
     "my_rooms_none": "You are not in any rooms.",
-    "my_rooms_error": "Error getting your rooms: %v"
+    "my_rooms_error": "Error getting your rooms: %v",
+    "KickUserButton": "حذف بازیکن",
+    "KickUserSelectPrompt": "Select user to kick from room '%s':",
+    "KickUserConfirmPrompt": "Are you sure you want to kick %s from room %s?",
+    "KickUserCallbackSuccess": "User %s kicked successfully from room %s.",
+    "KickUserCallbackError": "Error kicking user: %v",
+    "KickUserNoPlayers": "No other players in this room to kick."
   },
   "scenario": {
     "create_prompt": "Please provide a scenario name: /create_scenario [name]",

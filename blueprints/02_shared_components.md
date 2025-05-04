@@ -29,7 +29,7 @@
 ## 3. `tgutil/` (Telegram Utilities)
 
 *   **`const.go`:**
-    *   Defines string constants for unique callback query identifiers (e.g., `UniqueJoinRoom`, `UniqueCreateGameSelectRoom`). Used for creating inline buttons and routing callbacks in `handler/callbacks.go`.
+    *   Defines string constants for unique callback query identifiers (e.g., `UniqueJoinRoom`, `UniqueCreateGameSelectRoom`, `UniqueKickUserSelect`, `UniqueKickUserConfirm`). Used for creating inline buttons and routing callbacks in `handler/callbacks.go`.
 *   **`refresh_state.go`:**
     *   **`RefreshingMessageBook` struct:** Manages the state for dynamic message updates (like the room list).
         *   Tracks active messages per chat ID (`activeMessages map[int64]*RefreshingMessage`).

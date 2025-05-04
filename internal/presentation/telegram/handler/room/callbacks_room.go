@@ -3,15 +3,17 @@ package telegram
 import (
 	"context"
 	"fmt"
+	"gopkg.in/telebot.v3"
 	"log"
+	"strconv"
+	"strings"
 
 	roomEntity "telemafia/internal/domain/room/entity"
 	roomCommand "telemafia/internal/domain/room/usecase/command"
 	roomQuery "telemafia/internal/domain/room/usecase/query"
 	messages "telemafia/internal/presentation/telegram/messages"
+	sharedEntity "telemafia/internal/shared/entity"
 	tgutil "telemafia/internal/shared/tgutil"
-
-	"gopkg.in/telebot.v3"
 )
 
 // RefreshNotifier defines an interface for triggering a refresh.
@@ -189,5 +191,123 @@ func HandleJoinRoomCallback(
 	if err != nil {
 		return err
 	}
+	return c.Edit(message, markup, telebot.ModeMarkdownV2, telebot.NoPreview)
+}
+
+// HandleKickUserSelectCallback shows the list of users to kick from a room.
+func HandleKickUserSelectCallback(
+	getPlayersHandler *roomQuery.GetPlayersInRoomHandler,
+	c telebot.Context,
+	roomIDStr string, // Room ID passed as data
+	msgs *messages.Messages,
+) error {
+	roomID := roomEntity.RoomID(roomIDStr)
+	requester := tgutil.ToUser(c.Sender()) // Assumes this is called by an admin
+	if requester == nil {
+		return c.Respond(&telebot.CallbackResponse{Text: msgs.Common.ErrorIdentifyRequester, ShowAlert: true})
+	}
+
+	// Fetch players in the room
+	players, err := getPlayersHandler.Handle(context.Background(), roomQuery.GetPlayersInRoomQuery{RoomID: roomID})
+	if err != nil {
+		log.Printf("KickUserSelect: Error fetching players for room '%s': %v", roomID, err)
+		return c.Respond(&telebot.CallbackResponse{Text: fmt.Sprintf(msgs.Common.CallbackErrorGeneric, err), ShowAlert: true})
+	}
+
+	markup := &telebot.ReplyMarkup{}
+	var userRows []telebot.Row
+	playersToKickCount := 0
+
+	for _, player := range players {
+		// Don't list the admin themself
+		if player.ID == requester.ID {
+			continue
+		}
+		playersToKickCount++
+		// Create payload: roomID|userIDToKick
+		payload := fmt.Sprintf("%s|%d", roomIDStr, player.ID)
+		btn := markup.Data(player.FirstName, tgutil.UniqueKickUserConfirm, payload)
+		userRows = append(userRows, markup.Row(btn))
+	}
+
+	if playersToKickCount == 0 {
+		_ = c.Respond(&telebot.CallbackResponse{Text: msgs.Room.KickUserNoPlayers})
+		// Optionally edit the message back to the standard room detail?
+		// For now, just respond and leave the message as is.
+		return nil
+	}
+
+	// Add cancel button
+	cancelPayload := roomIDStr                                                                  // Cancel goes back to room detail view
+	cancelBtn := markup.Data(msgs.Room.LeaveCancelButton, tgutil.UniqueJoinRoom, cancelPayload) // Re-use join unique to show detail
+	userRows = append(userRows, markup.Row(cancelBtn))
+
+	markup.Inline(userRows...)
+
+	prompt := fmt.Sprintf(msgs.Room.KickUserSelectPrompt, roomIDStr) // Room name would be better
+	return c.Edit(prompt, markup)
+}
+
+// HandleKickUserConfirmCallback handles the selection of a user to kick.
+func HandleKickUserConfirmCallback(
+	kickUserHandler *roomCommand.KickUserHandler,
+	getRoomsHandler *roomQuery.GetRoomsHandler, // Need these to reconstruct RoomDetailMessage
+	getPlayersHandler *roomQuery.GetPlayersInRoomHandler,
+	roomList RefreshNotifier,
+	roomDetail RefreshNotifier,
+	c telebot.Context,
+	data string, // Payload: roomID|userIDToKick
+	msgs *messages.Messages,
+) error {
+	requester := tgutil.ToUser(c.Sender()) // Assumes this is called by an admin
+	if requester == nil {
+		return c.Respond(&telebot.CallbackResponse{Text: msgs.Common.ErrorIdentifyRequester, ShowAlert: true})
+	}
+
+	// Parse payload
+	parts := strings.Split(data, "|")
+	if len(parts) != 2 {
+		log.Printf("KickUserConfirm: Invalid payload format: %s", data)
+		return c.Respond(&telebot.CallbackResponse{Text: fmt.Sprintf(msgs.Common.CallbackErrorGeneric, "invalid data"), ShowAlert: true})
+	}
+	roomIDStr := parts[0]
+	userIDToKickStr := parts[1]
+
+	roomID := roomEntity.RoomID(roomIDStr)
+	userIDToKick, err := strconv.ParseInt(userIDToKickStr, 10, 64)
+	if err != nil {
+		log.Printf("KickUserConfirm: Invalid user ID in payload: %s, error: %v", userIDToKickStr, err)
+		return c.Respond(&telebot.CallbackResponse{Text: fmt.Sprintf(msgs.Common.CallbackErrorGeneric, "invalid user ID"), ShowAlert: true})
+	}
+
+	// Call the use case
+	kickCmd := roomCommand.KickUserCommand{
+		Requester: *requester,
+		RoomID:    roomID,
+		PlayerID:  sharedEntity.UserID(userIDToKick),
+	}
+	if err := kickUserHandler.Handle(context.Background(), kickCmd); err != nil {
+		log.Printf("KickUserConfirm: Error kicking user %d from room %s: %v", userIDToKick, roomID, err)
+		return c.Respond(&telebot.CallbackResponse{Text: fmt.Sprintf(msgs.Room.KickUserCallbackError, err), ShowAlert: true})
+	}
+
+	// Success - trigger refreshes and edit back to room detail
+	roomList.RaiseRefreshNeeded()
+	roomDetail.RaiseRefreshNeeded()
+
+	// Acknowledge the callback first
+	// User's name isn't readily available here without another fetch, use ID for now
+	ackMsg := fmt.Sprintf(msgs.Room.KickUserCallbackSuccess, userIDToKickStr, roomIDStr)
+	_ = c.Respond(&telebot.CallbackResponse{Text: ackMsg})
+
+	// Prepare and edit the message back to the standard room detail
+	// Note: We pass requester.Admin which should be true here
+	message, markup, err := RoomDetailMessage(getRoomsHandler, getPlayersHandler, msgs, requester.Admin, roomIDStr)
+	if err != nil {
+		log.Printf("KickUserConfirm: Error preparing room detail after kick for room '%s': %v", roomID, err)
+		// Can't easily recover the message here, just log
+		return nil
+	}
+
 	return c.Edit(message, markup, telebot.ModeMarkdownV2, telebot.NoPreview)
 }

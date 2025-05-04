@@ -71,6 +71,12 @@ type RoomMessages struct {
 	MyRoomsTitle                string `json:"my_rooms_title"`
 	MyRoomsNone                 string `json:"my_rooms_none"`
 	MyRoomsError                string `json:"my_rooms_error"`
+	KickUserButton              string `json:"KickUserButton"`
+	KickUserSelectPrompt        string `json:"KickUserSelectPrompt"`
+	KickUserConfirmPrompt       string `json:"KickUserConfirmPrompt"`
+	KickUserCallbackSuccess     string `json:"KickUserCallbackSuccess"`
+	KickUserCallbackError       string `json:"KickUserCallbackError"`
+	KickUserNoPlayers           string `json:"KickUserNoPlayers"`
 }
 
 type ScenarioMessages struct {

@@ -75,16 +75,24 @@ func RoomDetailMessage(
 	// Arrange the first row
 	firstRow := markup.Row(leaveButton, inviteButton)
 
-	// Conditionally create and arrange the second row (admin only)
+	// Prepare admin rows
+	adminRows := []telebot.Row{}
 	if isAdmin {
+		// Kick User Button Row
+		kickButton := markup.Data(msgs.Room.KickUserButton, tgutil.UniqueKickUserSelect, roomID)
+		kickRow := markup.Row(kickButton)
+		adminRows = append(adminRows, kickRow)
+
+		// Start Game Button Row
 		startButton := markup.Data(msgs.Game.StartButton, tgutil.UniqueCreateGameSelectRoom, roomID)
-		adminRow := markup.Row(startButton)
-		// Add both rows to the inline keyboard
-		markup.Inline(firstRow, adminRow)
-	} else {
-		// Add only the first row
-		markup.Inline(firstRow)
+		startRow := markup.Row(startButton)
+		adminRows = append(adminRows, startRow)
 	}
+
+	// Combine rows and add to markup
+	allRows := []telebot.Row{firstRow}
+	allRows = append(allRows, adminRows...)
+	markup.Inline(allRows...)
 
 	// No need to manually set markup.InlineKeyboard, markup.Inline handles it
 	return messageText, markup, nil
