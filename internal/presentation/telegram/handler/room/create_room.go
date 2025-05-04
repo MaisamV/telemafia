@@ -31,10 +31,15 @@ func HandleCreateRoom(
 		return c.Send(msgs.Common.ErrorIdentifyUser)
 	}
 
+	// Admin check - only admins can create rooms
+	if !user.Admin {
+		return c.Send(msgs.Common.ErrorPermissionDenied)
+	}
+
 	cmd := roomCommand.CreateRoomCommand{
-		ID:        roomEntity.RoomID(fmt.Sprintf("room_%d", time.Now().UnixNano())), // Generate unique ID
-		Name:      args,
-		CreatorID: user.ID, // Pass CreatorID
+		ID:      roomEntity.RoomID(fmt.Sprintf("room_%d", time.Now().UnixNano())), // Generate unique ID
+		Name:    args,
+		Creator: user, // Pass the full User struct
 	}
 
 	createdRoom, err := createRoomHandler.Handle(context.Background(), cmd)

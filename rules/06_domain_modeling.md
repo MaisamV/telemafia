@@ -7,7 +7,7 @@
 *   **Location:** `internal/domain/<module>/entity/`
 *   **Entities:** Represent objects with identity and lifecycle (e.g., `Room`, `Game`, `Scenario`).
     *   Have a unique identifier (e.g., `RoomID`).
-    *   Contain attributes representing their state.
+    *   Contain attributes representing their state (e.g., `Room.Name`, `Room.Players`, `Room.Moderator`).
     *   May contain methods that enforce business rules (invariants) related to their state (e.g., validation in a `NewRoom` constructor).
 *   **Value Objects:** Represent descriptive aspects of the domain, identified by their value, not identity (e.g., `Role`, `UserID`, `GameState`).
     *   Typically immutable.

@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"errors"
 	roomEntity "telemafia/internal/domain/room/entity"
 	roomPort "telemafia/internal/domain/room/port"
 	sharedEntity "telemafia/internal/shared/entity"
@@ -11,9 +12,9 @@ import (
 
 // CreateRoomCommand represents the command to create a new room
 type CreateRoomCommand struct {
-	ID        roomEntity.RoomID
-	Name      string
-	CreatorID sharedEntity.UserID
+	ID      roomEntity.RoomID
+	Name    string
+	Creator *sharedEntity.User // Changed to pass the full User struct
 }
 
 // CreateRoomHandler handles room creation
@@ -32,12 +33,17 @@ func NewCreateRoomHandler(repo roomPort.RoomWriter, publisher sharedEvent.Publis
 
 // Handle processes the create room command
 func (h *CreateRoomHandler) Handle(ctx context.Context, cmd CreateRoomCommand) (*roomEntity.Room, error) {
-	room, err := roomEntity.NewRoom(cmd.ID, cmd.Name)
+	if cmd.Creator == nil {
+		// Handle error: Creator cannot be nil
+		return nil, errors.New("create room: creator cannot be nil") // Use standard error
+	}
+	room, err := roomEntity.NewRoom(cmd.ID, cmd.Name, cmd.Creator) // Pass creator to NewRoom
 	if err != nil {
 		return nil, err
 	}
 
 	// Add Creator logic if needed - the entity constructor doesn't take creator anymore
+	// Now handled by NewRoom constructor
 	// creator := sharedEntity.User{ ID: cmd.CreatorID /* Fetch full user? */ }
 	// room.AddPlayer(&creator)
 
@@ -50,6 +56,7 @@ func (h *CreateRoomHandler) Handle(ctx context.Context, cmd CreateRoomCommand) (
 		RoomID:    room.ID,
 		Name:      room.Name,
 		CreatedAt: time.Now(),
+		CreatorID: cmd.Creator.ID, // Add creator ID to event
 		// ScenarioName: room.ScenarioName, // Add if needed
 	}
 

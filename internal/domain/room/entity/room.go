@@ -18,6 +18,7 @@ type Room struct {
 	Players      []*sharedEntity.User // Use imported User type
 	Description  map[string]string
 	ScenarioName string
+	Moderator    *sharedEntity.User // Added Moderator field
 }
 
 // Predefined error variables (using standard errors)
@@ -30,9 +31,13 @@ var (
 )
 
 // NewRoom creates a new Room instance with validation
-func NewRoom(id RoomID, name string) (*Room, error) {
+func NewRoom(id RoomID, name string, creator *sharedEntity.User) (*Room, error) { // Added creator parameter
 	if len(name) < 3 || len(name) > 50 {
 		return nil, ErrInvalidRoomName
+	}
+	if creator == nil {
+		// Depending on requirements, maybe return an error or assign a default/nil moderator
+		return nil, errors.New("room creator cannot be nil")
 	}
 
 	return &Room{
@@ -42,6 +47,7 @@ func NewRoom(id RoomID, name string) (*Room, error) {
 		Players:      make([]*sharedEntity.User, 0), // Use imported User type
 		Description:  make(map[string]string),
 		ScenarioName: "",
+		Moderator:    creator, // Set the creator as the initial moderator
 	}, nil
 }
 

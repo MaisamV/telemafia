@@ -17,6 +17,7 @@ import (
 type RoomCreatedEvent struct {
 	RoomID       roomEntity.RoomID // Updated type
 	Name         string
+	CreatorID    sharedEntity.UserID // Add CreatorID
 	CreatedAt    time.Time
 	ScenarioName string
 }

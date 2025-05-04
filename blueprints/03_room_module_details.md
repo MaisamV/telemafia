@@ -8,11 +8,12 @@
 
 *   **`RoomID` (type `string`):** Unique identifier for a room.
 *   **`Room` struct:**
-    *   Fields: `ID` (RoomID), `Name` (string), `CreatedAt` (time.Time), `Players` ([]*sharedEntity.User), `Description` (map[string]string), `ScenarioName` (string).
+    *   Fields: `ID` (RoomID), `Name` (string), `CreatedAt` (time.Time), `Players` ([]*sharedEntity.User), `Description` (map[string]string), `ScenarioName` (string), `Moderator` (*sharedEntity.User).
     *   `Players`: Slice of pointers to shared User entities currently in the room.
     *   `ScenarioName`: Holds the name of the assigned scenario (if any).
+    *   `Moderator`: Pointer to the User who created the room and has moderation rights.
 *   **Error Variables:** Defines standard errors like `ErrInvalidRoomName`, `ErrRoomNotFound`, `ErrPlayerNotInRoom`.
-*   **`NewRoom(id RoomID, name string) (*Room, error)`:** Constructor, validates name length, initializes fields.
+*   **`NewRoom(id RoomID, name string, creator *sharedEntity.User) (*Room, error)`:** Constructor, validates name length, validates creator is not nil, initializes fields, sets creator as Moderator.
 *   **`AddPlayer(player *sharedEntity.User)`:** Appends a player to the `Players` slice.
 *   **`RemovePlayer(playerID sharedEntity.UserID)`:** Removes a player by ID from the `Players` slice.
 *   **`SetDescription(descriptionName string, text string)`:** Adds/updates an entry in the `Description` map.
@@ -40,8 +41,8 @@ Defines the interfaces required by the Room domain to interact with persistence.
     *   `AddDescriptionCommand`: Contains `Requester` (User), `Room` (*Room), `DescriptionName`, `Text`.
     *   `AddDescriptionHandler`: Depends on `RoomRepository`. Handles admin check, calls `Room.SetDescription()`, and `RoomRepository.UpdateRoom()`.
 *   **`create_room.go`:**
-    *   `CreateRoomCommand`: Contains `ID`, `Name`, `CreatorID`.
-    *   `CreateRoomHandler`: Depends on `RoomWriter` and `event.Publisher`. Calls `entity.NewRoom`, `RoomWriter.CreateRoom`, and publishes `RoomCreatedEvent`.
+    *   `CreateRoomCommand`: Contains `ID`, `Name`, `Creator` (*sharedEntity.User).
+    *   `CreateRoomHandler`: Depends on `RoomWriter` and `event.Publisher`. Calls `entity.NewRoom` (passing creator), `RoomWriter.CreateRoom`, and publishes `RoomCreatedEvent`.
 *   **`delete_room.go`:**
     *   `DeleteRoomCommand`: Contains `Requester`, `RoomID`.
     *   `DeleteRoomHandler`: Depends on `RoomWriter`. Handles admin check, calls `RoomWriter.DeleteRoom`.

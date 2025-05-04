@@ -61,6 +61,7 @@
     10. If a new dynamic message is sent, track it using `notifier.AddActiveMessage()`.
     11. If a dynamic message becomes invalid, untrack it using `notifier.RemoveActiveMessage()`.
 *   **Specific Handlers:**
+    *   `room.HandleCreateRoom`: Handles the `/create_room` command. Requires admin privileges. Parses name, converts sender to `User`, calls `CreateRoomHandler` use case (passing the User), triggers refresh, and sends success message.
     *   `room.HandleJoinRoomCallback`: Handles the join button press. Calls `JoinRoom` use case, updates refresh state, calls `room.RoomDetailMessage`, and edits the message using `ModeMarkdownV2`.
     *   `room.HandleKickUserSelectCallback`: Callback handler for the admin "Kick User" button. Fetches players in the room (excluding the admin), displays a message (`msgs.Room.KickUserSelectPrompt`) with each player as a button. Button payload includes roomID and userIDToKick, unique is `UniqueKickUserConfirm`. Includes a cancel button.
     *   `room.HandleKickUserConfirmCallback`: Callback handler when an admin selects a user to kick. Parses payload, calls `KickUser` use case, triggers refreshes for room list and detail, responds with success (`msgs.Room.KickUserCallbackSuccess`), and edits the message back to the standard room detail view.

@@ -22,6 +22,7 @@
     *   **`Publisher` interface:** Defines the contract for publishing events (`Publish(event Event) error`). The current implementation in `main.go` simply logs events.
 *   **`events.go`:**
     *   Defines concrete event structs (e.g., `RoomCreatedEvent`, `PlayerJoinedEvent`, `PlayerLeftEvent`, `PlayerKickedEvent`).
+        *   `RoomCreatedEvent`: Contains `RoomID`, `Name`, `CreatorID`, `CreatedAt`.
     *   Each struct embeds the necessary data for the event (IDs, names, timestamps).
     *   Each struct implements the `Event` interface.
     *   Used by command handlers to signal significant domain state changes.
