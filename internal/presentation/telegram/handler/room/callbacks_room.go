@@ -189,5 +189,5 @@ func HandleJoinRoomCallback(
 	if err != nil {
 		return err
 	}
-	return c.Edit(message, markup, telebot.ModeMarkdown, telebot.NoPreview)
+	return c.Edit(message, markup, telebot.ModeMarkdownV2, telebot.NoPreview)
 }

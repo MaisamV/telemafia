@@ -30,12 +30,10 @@ func HandleSelectRoomForCreateGame(
 	if err != nil {
 		errMsg := fmt.Sprintf(msgs.Game.CreateGameErrorFetchScenarios, err)
 		log.Printf("Callback creategame_room: Error fetching scenarios: %v", err)
-		_ = c.Respond(&telebot.CallbackResponse{Text: errMsg, ShowAlert: true})
-		return c.Edit(msgs.Common.CallbackFailedEdit)
+		return c.Respond(&telebot.CallbackResponse{Text: errMsg, ShowAlert: true})
 	}
 	if len(scenarios) == 0 {
-		_ = c.Respond(&telebot.CallbackResponse{Text: "No scenarios available.", ShowAlert: true})
-		return c.Edit(msgs.Common.CallbackFailedEdit)
+		return c.Respond(&telebot.CallbackResponse{Text: "No scenarios available.", ShowAlert: true})
 	}
 
 	// Build scenario keyboard
@@ -54,8 +52,7 @@ func HandleSelectRoomForCreateGame(
 	rows = append(rows, markup.Row(markup.Data(msgs.Game.CreateGameCancelButton, tgutil.UniqueCancelGame)))
 	markup.Inline(rows...)
 
-	// Edit message to ask for scenario
-	promptMsg := fmt.Sprintf(msgs.Game.CreateGameSelectScenarioPrompt, roomID) // Assuming room name might be better? Fetch room details?
+	promptMsg := fmt.Sprintf(msgs.Game.CreateGameSelectScenarioPrompt)
 	return c.Edit(promptMsg, markup)
 }
 
@@ -89,8 +86,7 @@ func HandleSelectScenarioForCreateGame(
 	if err != nil {
 		errMsg := fmt.Sprintf(msgs.Game.CreateGameErrorFetchPlayers, err)
 		log.Printf("Callback creategame_scen: Error fetching players for room %s: %v", roomID, err)
-		_ = c.Respond(&telebot.CallbackResponse{Text: errMsg, ShowAlert: true})
-		return c.Edit(msgs.Common.CallbackFailedEdit)
+		return c.Respond(&telebot.CallbackResponse{Text: errMsg, ShowAlert: true})
 	}
 	var playerNames []string
 	for _, p := range players {
@@ -104,8 +100,7 @@ func HandleSelectScenarioForCreateGame(
 	if err != nil {
 		errMsg := fmt.Sprintf(msgs.Game.CreateGameErrorFetchScenarioDetails, err)
 		log.Printf("Callback creategame_scen: Error fetching scenario %s: %v", scenarioID, err)
-		_ = c.Respond(&telebot.CallbackResponse{Text: errMsg, ShowAlert: true})
-		return c.Edit(msgs.Common.CallbackFailedEdit)
+		return c.Respond(&telebot.CallbackResponse{Text: errMsg, ShowAlert: true})
 	}
 
 	// Flatten roles for display and count
@@ -122,9 +117,8 @@ func HandleSelectScenarioForCreateGame(
 	if len(players) != len(flatRoles) {
 		errMsg := fmt.Sprintf(msgs.Game.AssignRolesErrorPlayerMismatch, len(flatRoles), len(players), game.ID)
 		log.Printf("Callback creategame_scen: Mismatch players(%d) roles(%d) for game %s", len(players), len(flatRoles), game.ID)
-		_ = c.Respond(&telebot.CallbackResponse{Text: errMsg, ShowAlert: true})
+		return c.Respond(&telebot.CallbackResponse{Text: errMsg, ShowAlert: true})
 		// Maybe delete the created game record here?
-		return c.Edit(msgs.Common.CallbackFailedEdit)
 	}
 
 	// 4. Build confirmation message and keyboard
@@ -135,12 +129,9 @@ func HandleSelectScenarioForCreateGame(
 	))
 
 	confirmMsg := fmt.Sprintf(msgs.Game.CreateGameConfirmPrompt,
-		roomID, // Use room/scenario names?
-		scenarioID,
-		strings.Join(playerNames, "\n- "),
 		strings.Join(roleNames, "\n- "),
 	)
-	return c.Edit(confirmMsg, markup)
+	return c.Edit(confirmMsg, markup, telebot.ModeMarkdownV2)
 }
 
 // HandleStartCreatedGame processes the start button press, assigning roles.
@@ -153,8 +144,7 @@ func HandleStartCreatedGame(
 ) error {
 	requester := tgutil.ToUser(c.Sender())
 	if requester == nil {
-		_ = c.Respond(&telebot.CallbackResponse{Text: msgs.Common.ErrorIdentifyRequester, ShowAlert: true})
-		return c.Edit(msgs.Common.CallbackFailedEdit)
+		return c.Respond(&telebot.CallbackResponse{Text: msgs.Common.ErrorIdentifyRequester, ShowAlert: true})
 	}
 
 	cmd := gameCommand.AssignRolesCommand{
@@ -173,22 +163,22 @@ func HandleStartCreatedGame(
 
 	// Send private messages
 	var assignResults []string
-	for userID, role := range assignments {
-		targetUser := &telebot.User{ID: int64(userID)}
+	for user, role := range assignments {
+		targetUser := &telebot.User{ID: int64(user.ID)}
 		// Need Room Name - should fetch game details first?
-		privateMsg := fmt.Sprintf(msgs.Game.AssignRolesSuccessPrivate, gameID, "<Room Name Placeholder>", role.Name)
-		_, pmErr := bot.Send(targetUser, privateMsg)
+		privateMsg := fmt.Sprintf(msgs.Game.AssignRolesSuccessPrivate, role.Name, role.Side)
+		_, pmErr := bot.Send(targetUser, privateMsg, telebot.ModeMarkdownV2)
 		if pmErr != nil {
-			log.Printf(msgs.Game.AssignRolesErrorSendingPrivate, userID, pmErr)
+			log.Printf(msgs.Game.AssignRolesErrorSendingPrivate, user.ID, pmErr)
 			// Collect errors?
 		}
 		// Get username for public message (Requires fetching users?)
-		assignResults = append(assignResults, fmt.Sprintf("%d -> %s (%s)", userID, role.Name, role.Side))
+		assignResults = append(assignResults, fmt.Sprintf("%s \\-\\> %s \\(%s\\)", user.GetProfileLink(), role.Name, role.Side))
 	}
 
 	// Edit original message to show success
 	finalMsg := fmt.Sprintf(msgs.Game.CreateGameStartedSuccess, strings.Join(assignResults, "\n"))
-	return c.Edit(finalMsg)
+	return c.Edit(finalMsg, telebot.ModeMarkdownV2, telebot.NoPreview)
 }
 
 // HandleCancelCreateGame handles cancellation at any step.

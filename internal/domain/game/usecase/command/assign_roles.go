@@ -39,7 +39,7 @@ func NewAssignRolesHandler(gameRepo gamePort.GameRepository, scenarioRepo scenar
 }
 
 // Handle processes the assign roles command
-func (h *AssignRolesHandler) Handle(ctx context.Context, cmd AssignRolesCommand) (map[sharedEntity.UserID]scenarioEntity.Role, error) { // Updated return type
+func (h *AssignRolesHandler) Handle(ctx context.Context, cmd AssignRolesCommand) (map[sharedEntity.User]scenarioEntity.Role, error) { // Updated return type
 	// --- Permission Check ---
 	if !cmd.Requester.Admin {
 		return nil, errors.New("assign roles: admin privilege required")
@@ -123,13 +123,13 @@ func (h *AssignRolesHandler) Handle(ctx context.Context, cmd AssignRolesCommand)
 	})
 
 	// Store assignments in the game entity and prepare response map
-	assignments := make(map[sharedEntity.UserID]scenarioEntity.Role)
+	assignments := make(map[sharedEntity.User]scenarioEntity.Role)
 	for i, user := range users {
 		if i >= len(rolesToAssign) {
 			break // Safety check
 		}
 		game.AssignRole(user.ID, rolesToAssign[i])
-		assignments[user.ID] = rolesToAssign[i]
+		assignments[user] = rolesToAssign[i]
 		log.Printf("Assigned role '%s' to user ID %d", rolesToAssign[i].Name, user.ID)
 	}
 

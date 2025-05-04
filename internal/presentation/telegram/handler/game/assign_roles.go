@@ -42,12 +42,12 @@ func HandleAssignRoles(
 		return c.Send(fmt.Sprintf(msgs.Game.AssignRolesError, gameID, err))
 	}
 
-	for userID, role := range assignments {
-		targetUser := &telebot.User{ID: int64(userID)}
-		privateMsg := fmt.Sprintf(msgs.Game.AssignRolesSuccessPrivate, gameID, "<Room Name>", role.Name)
+	for user, role := range assignments {
+		targetUser := &telebot.User{ID: int64(user.ID)}
+		privateMsg := fmt.Sprintf(msgs.Game.AssignRolesSuccessPrivate, role.Name, role.Side)
 		_, err := bot.Send(targetUser, privateMsg)
 		if err != nil {
-			log.Printf(msgs.Game.AssignRolesErrorSendingPrivate, userID, err)
+			log.Printf(msgs.Game.AssignRolesErrorSendingPrivate, user.ID, err)
 		}
 	}
 

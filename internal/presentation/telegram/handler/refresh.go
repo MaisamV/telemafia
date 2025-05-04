@@ -72,7 +72,7 @@ func (h *BotHandler) StartRefreshTimer() {
 				)
 				opts := []interface{}{
 					markup,
-					telebot.ModeMarkdown,
+					telebot.ModeMarkdownV2,
 					telebot.NoPreview,
 				}
 				return message, opts, err

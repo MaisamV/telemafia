@@ -48,26 +48,22 @@ func RoomDetailMessage(
 		playerNames = "No players yet."
 	} else {
 		for i, player := range players {
-			if player.Username != "" {
-				playerNames += fmt.Sprintf("%d - [%s](https://t.me/%s)\n", i+1, player.FirstName, player.Username)
-			} else {
-				playerNames += fmt.Sprintf("%d - %s\n", i+1, player.FirstName)
-			}
+			playerNames += fmt.Sprintf("%d \\- %s\n", i+1, player.GetProfileLink())
 		}
 	}
 
 	// Format message text
 	var messageText string
-	if room.ScenarioName != "" {
-		messageText = fmt.Sprintf(msgs.Room.RoomDetailWithScenario,
-			room.Name,
-			room.ScenarioName,
-			playerNames)
-	} else {
-		messageText = fmt.Sprintf(msgs.Room.RoomDetail,
-			room.Name,
-			playerNames)
-	}
+	//if room.ScenarioName != "" {
+	//	messageText = fmt.Sprintf(msgs.Room.RoomDetailWithScenario,
+	//		room.Name,
+	//		room.ScenarioName,
+	//		playerNames)
+	//} else {
+	messageText = fmt.Sprintf(msgs.Room.RoomDetail,
+		room.Name,
+		playerNames)
+	//}
 
 	// Create buttons
 	markup := &telebot.ReplyMarkup{}
