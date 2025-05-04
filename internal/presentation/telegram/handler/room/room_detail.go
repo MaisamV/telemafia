@@ -44,12 +44,9 @@ func RoomDetailMessage(
 
 	// Construct player list string
 	playerNames := ""
-	if len(players) == 0 {
-		playerNames = "No players yet."
-	} else {
-		for i, player := range players {
-			playerNames += fmt.Sprintf("%d \\- %s\n", i+1, player.GetProfileLink())
-		}
+
+	for i, player := range players {
+		playerNames += fmt.Sprintf("%d \\- %s\n", i+1, player.GetProfileLink())
 	}
 
 	// Format message text
@@ -62,6 +59,7 @@ func RoomDetailMessage(
 	//} else {
 	messageText = fmt.Sprintf(msgs.Room.RoomDetail,
 		room.Name,
+		room.Moderator.GetProfileLink(),
 		playerNames)
 	//}
 
@@ -78,12 +76,13 @@ func RoomDetailMessage(
 	// Prepare admin rows
 	adminRows := []telebot.Row{}
 	if isAdmin {
-		// Kick User Button Row
+		// Admin Action Row (Kick, Change Moderator)
 		kickButton := markup.Data(msgs.Room.KickUserButton, tgutil.UniqueKickUserSelect, roomID)
-		kickRow := markup.Row(kickButton)
-		adminRows = append(adminRows, kickRow)
+		modButton := markup.Data(msgs.Room.ChangeModeratorButton, tgutil.UniqueChangeModeratorSelect, roomID)
+		actionRow := markup.Row(kickButton, modButton) // Add buttons to the same row
+		adminRows = append(adminRows, actionRow)
 
-		// Start Game Button Row
+		// Start Game Button Row (Separate Row)
 		startButton := markup.Data(msgs.Game.StartButton, tgutil.UniqueCreateGameSelectRoom, roomID)
 		startRow := markup.Row(startButton)
 		adminRows = append(adminRows, startRow)

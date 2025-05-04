@@ -20,8 +20,8 @@
     1.  Retrieves the callback data.
     2.  Uses `tgutil.SplitCallbackData` to separate the `unique` identifier and the `payload`.
     3.  Uses a `switch` statement on the `unique` identifier.
-    4.  Each `case` corresponds to a specific button type (defined in `tgutil/const.go`, e.g., `tgutil.UniqueCreateGameSelectRoom`, `tgutil.UniqueKickUserSelect`, `tgutil.UniqueKickUserConfirm`).
-    5.  Calls the relevant **exported handler function** from the appropriate sub-package (e.g., `room.HandleJoinRoomCallback`, `room.HandleKickUserSelectCallback`), passing the `telebot.Context`, parsed `payload`, and necessary dependencies.
+    4.  Each `case` corresponds to a specific button type (defined in `tgutil/const.go`, e.g., `tgutil.UniqueCreateGameSelectRoom`, `tgutil.UniqueKickUserSelect`, `tgutil.UniqueChangeModeratorSelect`).
+    5.  Calls the relevant **exported handler function** from the appropriate sub-package (e.g., `room.HandleKickUserSelectCallback`, `room.HandleChangeModeratorSelectCallback`), passing the `telebot.Context`, parsed `payload`, and necessary dependencies.
 
 ## 3. `handler/refresh.go`
 
@@ -39,7 +39,7 @@
 *   **`BotHandler.SendOrUpdateRefreshingMessage()`:** Utility used by handlers (like `HandleListRooms`) to either send a new dynamic message and track it, or edit an existing tracked message.
 *   **Message Preparation Functions (e.g., `room.PrepareRoomListMessage`, `room.RoomDetailMessage`):** Exported functions (located in handler sub-packages like `room/`) responsible for fetching current data (using injected query handlers) and formatting the message text and `telebot.ReplyMarkup`.
     *   These functions may accept additional parameters, such as the requesting user's admin status (as seen in `RoomDetailMessage`), to render conditional UI elements like admin-only buttons.
-    *   `RoomDetailMessage`: Now always uses the `msgs.Room.RoomDetail` format string, formats the player list using `user.GetProfileLink()`, and includes admin-only buttons for "Start Game" and "Kick User".
+    *   `RoomDetailMessage`: Now always uses the `msgs.Room.RoomDetail` format string, formats the player list using `user.GetProfileLink()`, and includes admin-only buttons for "Start Game", "Kick User", and "Change Moderator".
 
 ## 4. `handler/<module>/` (e.g., `handler/room/`, `handler/game/`)
 
@@ -65,6 +65,8 @@
     *   `room.HandleJoinRoomCallback`: Handles the join button press. Calls `JoinRoom` use case, updates refresh state, calls `room.RoomDetailMessage`, and edits the message using `ModeMarkdownV2`.
     *   `room.HandleKickUserSelectCallback`: Callback handler for the admin "Kick User" button. Fetches players in the room (excluding the admin), displays a message (`msgs.Room.KickUserSelectPrompt`) with each player as a button. Button payload includes roomID and userIDToKick, unique is `UniqueKickUserConfirm`. Includes a cancel button.
     *   `room.HandleKickUserConfirmCallback`: Callback handler when an admin selects a user to kick. Parses payload, calls `KickUser` use case, triggers refreshes for room list and detail, responds with success (`msgs.Room.KickUserCallbackSuccess`), and edits the message back to the standard room detail view.
+    *   `room.HandleChangeModeratorSelectCallback`: Callback handler for the admin "Change Moderator" button. Fetches players, displays message (`msgs.Room.ChangeModeratorSelectPrompt`) with each player as a button (including the current moderator). Button payload includes roomID and userIDToMakeMod, unique is `UniqueChangeModeratorConfirm`. Includes a cancel button.
+    *   `room.HandleChangeModeratorConfirmCallback`: Callback handler when an admin selects a new moderator. Parses payload, fetches target user details, calls `ChangeModerator` use case (which updates the moderator and manages player lists), triggers refreshes, responds with success (`msgs.Room.ChangeModeratorCallbackSuccess`), and edits message back to room detail view.
     *   `game.HandleCreateGame`: Initiates the interactive game creation flow (admin only). Sends a message prompting for room selection.
     *   `game.HandleSelectRoomForCreateGame`: Callback handler for room selection. Sends a message prompting for scenario selection.
     *   `game.HandleSelectScenarioForCreateGame`: Callback handler for scenario selection. Fetches data, presents confirmation message (`msgs.Game.CreateGameConfirmPrompt` with role list), with "Start" and "Cancel" buttons. Uses `ModeMarkdownV2`.
@@ -84,7 +86,7 @@
 
 ## 6. `messages/`
 
-*   **`messages.json` (Root directory):** Contains user-facing strings. Includes keys for the interactive kick flow (`KickUserButton`, `KickUserSelectPrompt`, `KickUserCallbackSuccess`, `KickUserCallbackError`, `KickUserNoPlayers`). Text for game creation flow, role assignment PMs, and room details updated (primarily Farsi translations and formatting, including MarkdownV2 syntax like `||` for spoilers and escaped characters `\\`).
+*   **`messages.json` (Root directory):** Contains user-facing strings. Includes keys for the kick flow and change moderator flow (`ChangeModeratorButton`, `ChangeModeratorSelectPrompt`, `ChangeModeratorCallbackSuccess`, `ChangeModeratorCallbackError`, `ChangeModeratorNoCandidates`). Text updated for various flows.
 *   **`messages.go`:** Defines the Go struct mirroring `messages.json`.
 *   **`loader.go`:** Loads messages from JSON.
 *   **Usage:** Injected `*Messages` struct used throughout handlers. 

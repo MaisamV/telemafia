@@ -97,6 +97,7 @@ func initializeDependencies(cfg *config.Config, msgs *messages.Messages) (*teleg
 	getPlayerRoomsHandler := roomQuery.NewGetPlayerRoomsHandler(roomRepo)
 	getPlayersInRoomsHandler := roomQuery.NewGetPlayersInRoomHandler(roomRepo)
 	addDescriptionHandler := roomCommand.NewAddDescriptionHandler(roomRepo)
+	changeModeratorHandler := roomCommand.NewChangeModeratorHandler(roomRepo)
 
 	// Scenario Use Cases
 	createScenarioHandler := scenarioCommand.NewCreateScenarioHandler(scenarioRepo)
@@ -128,6 +129,7 @@ func initializeDependencies(cfg *config.Config, msgs *messages.Messages) (*teleg
 		getPlayersInRoomsHandler,
 		getRoomHandler,
 		addDescriptionHandler,
+		changeModeratorHandler,
 		createScenarioHandler,
 		deleteScenarioHandler,
 		getScenarioByIDHandler,

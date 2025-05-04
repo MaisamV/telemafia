@@ -54,6 +54,7 @@ type BotHandler struct {
 	getPlayersInRoomHandler *roomQuery.GetPlayersInRoomHandler      // Use roomQuery
 	getRoomHandler          *roomQuery.GetRoomHandler               // Use roomQuery
 	addDescriptionHandler   *roomCommand.AddDescriptionHandler      // Add handler field
+	changeModeratorHandler  *roomCommand.ChangeModeratorHandler     // Add ChangeModeratorHandler field
 	createScenarioHandler   *scenarioCommand.CreateScenarioHandler  // Use scenarioCommand
 	deleteScenarioHandler   *scenarioCommand.DeleteScenarioHandler  // Use scenarioCommand
 	getScenarioByIDHandler  *scenarioQuery.GetScenarioByIDHandler   // Use scenarioQuery
@@ -81,6 +82,7 @@ func NewBotHandler(
 	getPlayersInRoomHandler *roomQuery.GetPlayersInRoomHandler, // Use roomQuery
 	getRoomHandler *roomQuery.GetRoomHandler, // Use roomQuery
 	addDescriptionHandler *roomCommand.AddDescriptionHandler, // Add handler param
+	changeModeratorHandler *roomCommand.ChangeModeratorHandler, // Add ChangeModeratorHandler param
 	createScenarioHandler *scenarioCommand.CreateScenarioHandler, // Use scenarioCommand
 	deleteScenarioHandler *scenarioCommand.DeleteScenarioHandler, // Use scenarioCommand
 	getScenarioByIDHandler *scenarioQuery.GetScenarioByIDHandler, // Use scenarioQuery
@@ -110,7 +112,8 @@ func NewBotHandler(
 		getPlayerRoomsHandler:    getPlayerRoomsHandler,
 		getPlayersInRoomHandler:  getPlayersInRoomHandler,
 		getRoomHandler:           getRoomHandler,
-		addDescriptionHandler:    addDescriptionHandler, // Assign handler
+		addDescriptionHandler:    addDescriptionHandler,  // Assign handler
+		changeModeratorHandler:   changeModeratorHandler, // Assign handler
 		createScenarioHandler:    createScenarioHandler,
 		deleteScenarioHandler:    deleteScenarioHandler,
 		getScenarioByIDHandler:   getScenarioByIDHandler,

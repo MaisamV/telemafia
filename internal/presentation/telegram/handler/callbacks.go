@@ -64,6 +64,17 @@ func (h *BotHandler) handleCallback(c telebot.Context) error {
 	case tgutil.UniqueKickUserConfirm:
 		return room.HandleKickUserConfirmCallback(h.kickUserHandler, h.getRoomsHandler, h.getPlayersInRoomHandler, h.roomListRefreshMessage, h.roomDetailRefreshMessage, c, data, h.msgs)
 
+	// Change Moderator Flow Callbacks
+	case tgutil.UniqueChangeModeratorSelect:
+		return room.HandleChangeModeratorSelectCallback(h.getPlayersInRoomHandler, c, data, h.msgs)
+	case tgutil.UniqueChangeModeratorConfirm:
+		// Need to inject ChangeModeratorHandler into BotHandler first
+		// For now, placeholder log:
+		// log.Printf("ChangeModeratorConfirm callback received for: %s - Handler not fully wired yet.", data)
+		// _ = c.Respond(&telebot.CallbackResponse{Text: "Handler not implemented yet."})
+		// return nil // Placeholder
+		return room.HandleChangeModeratorConfirmCallback(h.changeModeratorHandler, h.getRoomsHandler, h.getPlayersInRoomHandler, h.roomListRefreshMessage, h.roomDetailRefreshMessage, c, data, h.msgs)
+
 	// Existing Game Callbacks
 	case tgutil.UniqueConfirmAssignments:
 		return game.HandleConfirmAssignments(h.getGameByIDHandler, c, data, h.msgs)

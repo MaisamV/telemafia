@@ -16,8 +16,8 @@
     "create_prompt": "Please provide a room name: /create_room [name]",
     "create_success": "Room '%s' created successfully! ID: %s",
     "create_error": "Error creating room: %v",
-    "room_detail": "به %s خوش اومدی\\.\nمنتظر بمون تا نقش ها پخش بشه \uD83D\uDEAC\n\nبازیکنان:\n%s",
-    "room_detail_with_scenario": "%s\nسناریو: %s\nمنتظر بمون تا نقش ها پخش بشه 🚬\n\nبازیکنان:\n%s",
+    "room_detail": "به %s خوش اومدی\\.\nمنتظر بمون تا نقش ها پخش بشه \uD83D\uDEAC\n\nگرداننده:\n%s\n\nبازیکنان:\n%s",
+    "room_detail_with_scenario": "به %s خوش اومدی\\.\nمنتظر بمون تا نقش ها پخش بشه \uD83D\uDEAC\n\nگرداننده:\n%s\n\nبازیکنان:\n%s",
     "join_prompt": "Please provide a room ID: /join_room <room_id>",
     "join_success": "با موفقیت عضو شدید.",
     "join_error": "Error joining room '%s': %v",
@@ -65,7 +65,12 @@
     "KickUserConfirmPrompt": "Are you sure you want to kick %s from room %s?",
     "KickUserCallbackSuccess": "User %s kicked successfully from room %s.",
     "KickUserCallbackError": "Error kicking user: %v",
-    "KickUserNoPlayers": "No other players in this room to kick."
+    "KickUserNoPlayers": "No other players in this room to kick.",
+    "ChangeModeratorButton": "تغییر گرداننده",
+    "ChangeModeratorSelectPrompt": "Select new moderator for room '%s':",
+    "ChangeModeratorCallbackSuccess": "%s is now the moderator of room %s.",
+    "ChangeModeratorCallbackError": "Error changing moderator: %v",
+    "ChangeModeratorNoCandidates": "No other players available to become moderator."
   },
   "scenario": {
     "create_prompt": "Please provide a scenario name: /create_scenario [name]",

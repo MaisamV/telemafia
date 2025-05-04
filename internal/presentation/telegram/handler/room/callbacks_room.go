@@ -3,10 +3,11 @@ package telegram
 import (
 	"context"
 	"fmt"
-	"gopkg.in/telebot.v3"
 	"log"
 	"strconv"
 	"strings"
+
+	"gopkg.in/telebot.v3"
 
 	roomEntity "telemafia/internal/domain/room/entity"
 	roomCommand "telemafia/internal/domain/room/usecase/command"
@@ -307,6 +308,135 @@ func HandleKickUserConfirmCallback(
 		log.Printf("KickUserConfirm: Error preparing room detail after kick for room '%s': %v", roomID, err)
 		// Can't easily recover the message here, just log
 		return nil
+	}
+
+	return c.Edit(message, markup, telebot.ModeMarkdownV2, telebot.NoPreview)
+}
+
+// HandleChangeModeratorSelectCallback shows the list of users who can become the new moderator.
+func HandleChangeModeratorSelectCallback(
+	getPlayersHandler *roomQuery.GetPlayersInRoomHandler,
+	c telebot.Context,
+	roomIDStr string, // Room ID passed as data
+	msgs *messages.Messages,
+) error {
+	roomID := roomEntity.RoomID(roomIDStr)
+	requester := tgutil.ToUser(c.Sender()) // Assumes this is called by an admin
+	if requester == nil {
+		return c.Respond(&telebot.CallbackResponse{Text: msgs.Common.ErrorIdentifyRequester, ShowAlert: true})
+	}
+
+	// Fetch players in the room
+	players, err := getPlayersHandler.Handle(context.Background(), roomQuery.GetPlayersInRoomQuery{RoomID: roomID})
+	if err != nil {
+		log.Printf("ChangeModSelect: Error fetching players for room '%s': %v", roomID, err)
+		return c.Respond(&telebot.CallbackResponse{Text: fmt.Sprintf(msgs.Common.CallbackErrorGeneric, err), ShowAlert: true})
+	}
+
+	markup := &telebot.ReplyMarkup{}
+	var userRows []telebot.Row
+	moderatorCandidatesCount := 0
+
+	for _, player := range players {
+		moderatorCandidatesCount++
+		// Create payload: roomID|userIDToMakeModerator
+		payload := fmt.Sprintf("%s|%d", roomIDStr, player.ID)
+		btn := markup.Data(player.FirstName, tgutil.UniqueChangeModeratorConfirm, payload)
+		userRows = append(userRows, markup.Row(btn))
+	}
+
+	if moderatorCandidatesCount == 0 {
+		_ = c.Respond(&telebot.CallbackResponse{Text: msgs.Room.ChangeModeratorNoCandidates})
+		return nil // Stay on the same message (room detail)
+	}
+
+	// Add cancel button
+	cancelPayload := roomIDStr                                                                  // Cancel goes back to room detail view
+	cancelBtn := markup.Data(msgs.Room.LeaveCancelButton, tgutil.UniqueJoinRoom, cancelPayload) // Re-use join unique to show detail
+	userRows = append(userRows, markup.Row(cancelBtn))
+
+	markup.Inline(userRows...)
+
+	prompt := fmt.Sprintf(msgs.Room.ChangeModeratorSelectPrompt, roomIDStr) // Room name would be better
+	return c.Edit(prompt, markup)
+}
+
+// HandleChangeModeratorConfirmCallback handles the selection of a user to make moderator.
+func HandleChangeModeratorConfirmCallback(
+	changeModeratorHandler *roomCommand.ChangeModeratorHandler, // Inject the new use case handler
+	getRoomsHandler *roomQuery.GetRoomsHandler,
+	getPlayersHandler *roomQuery.GetPlayersInRoomHandler, // Needed to fetch the user details
+	roomList RefreshNotifier,
+	roomDetail RefreshNotifier,
+	c telebot.Context,
+	data string, // Payload: roomID|userIDToMakeModerator
+	msgs *messages.Messages,
+) error {
+	requester := tgutil.ToUser(c.Sender()) // Assumes this is called by an admin
+	if requester == nil {
+		return c.Respond(&telebot.CallbackResponse{Text: msgs.Common.ErrorIdentifyRequester, ShowAlert: true})
+	}
+
+	// Parse payload
+	parts := strings.Split(data, "|")
+	if len(parts) != 2 {
+		log.Printf("ChangeModConfirm: Invalid payload format: %s", data)
+		return c.Respond(&telebot.CallbackResponse{Text: fmt.Sprintf(msgs.Common.CallbackErrorGeneric, "invalid data"), ShowAlert: true})
+	}
+	roomIDStr := parts[0]
+	newModeratorIDStr := parts[1]
+
+	roomID := roomEntity.RoomID(roomIDStr)
+	newModeratorID, err := strconv.ParseInt(newModeratorIDStr, 10, 64)
+	if err != nil {
+		log.Printf("ChangeModConfirm: Invalid user ID in payload: %s, error: %v", newModeratorIDStr, err)
+		return c.Respond(&telebot.CallbackResponse{Text: fmt.Sprintf(msgs.Common.CallbackErrorGeneric, "invalid user ID"), ShowAlert: true})
+	}
+
+	// Fetch the target user's details (needed for the use case command)
+	// Ideally, there'd be a GetUserByID query, but we can get it from players list for now
+	players, err := getPlayersHandler.Handle(context.Background(), roomQuery.GetPlayersInRoomQuery{RoomID: roomID})
+	if err != nil {
+		log.Printf("ChangeModConfirm: Error fetching players for room '%s': %v", roomID, err)
+		return c.Respond(&telebot.CallbackResponse{Text: fmt.Sprintf(msgs.Common.CallbackErrorGeneric, err), ShowAlert: true})
+	}
+	var newModeratorUser *sharedEntity.User
+	for _, p := range players {
+		if p.ID == sharedEntity.UserID(newModeratorID) {
+			newModeratorUser = p
+			break
+		}
+	}
+	if newModeratorUser == nil {
+		// This might happen if the user left between selection and confirmation
+		log.Printf("ChangeModConfirm: Could not find user %d in room %s players list.", newModeratorID, roomID)
+		return c.Respond(&telebot.CallbackResponse{Text: fmt.Sprintf(msgs.Common.CallbackErrorGeneric, "selected user not found"), ShowAlert: true})
+	}
+
+	// Call the use case
+	changeCmd := roomCommand.ChangeModeratorCommand{
+		Requester:    requester,
+		RoomID:       roomID,
+		NewModerator: newModeratorUser,
+	}
+	if err := changeModeratorHandler.Handle(context.Background(), changeCmd); err != nil {
+		log.Printf("ChangeModConfirm: Error changing moderator for room %s: %v", roomID, err)
+		return c.Respond(&telebot.CallbackResponse{Text: fmt.Sprintf(msgs.Room.ChangeModeratorCallbackError, err), ShowAlert: true})
+	}
+
+	// Success - trigger refreshes and edit back to room detail
+	roomList.RaiseRefreshNeeded()
+	roomDetail.RaiseRefreshNeeded()
+
+	// Acknowledge the callback first
+	ackMsg := fmt.Sprintf(msgs.Room.ChangeModeratorCallbackSuccess, newModeratorUser.GetProfileLink(), roomIDStr)
+	_ = c.Respond(&telebot.CallbackResponse{Text: ackMsg})
+
+	// Prepare and edit the message back to the standard room detail
+	message, markup, err := RoomDetailMessage(getRoomsHandler, getPlayersHandler, msgs, requester.Admin, roomIDStr)
+	if err != nil {
+		log.Printf("ChangeModConfirm: Error preparing room detail after change for room '%s': %v", roomID, err)
+		return nil // Can't easily recover message
 	}
 
 	return c.Edit(message, markup, telebot.ModeMarkdownV2, telebot.NoPreview)

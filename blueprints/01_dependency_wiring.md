@@ -29,15 +29,35 @@ This function is the core of the DI setup:
 4.  **Event Publisher:**
     *   Instantiates a simple `EventPublisher` (defined locally in `main.go`) that currently just logs events. It implements the `event.Publisher` interface from `internal/shared/event/`.
 5.  **Use Case Handlers (Domain Interactors):**
-    *   Instantiates command and query handlers for each domain module (`room`, `scenario`, `game`) found in `internal/domain/<module>/usecase/command/` and `internal/domain/<module>/usecase/query/`.
+    *   Instantiates command and query handlers for each domain module (`room`, `scenario`, `game`), including the new `roomCommand.NewChangeModeratorHandler(roomRepo)`.
     *   **Constructor Injection:** Dependencies like repositories (ports), other clients (ports), and the event publisher are passed into the handler constructors (e.g., `roomCommand.NewCreateRoomHandler(roomRepo, eventPublisher)`). Handlers depend on *interface types*.
 6.  **Telegram Bot Handler (Presentation):**
     *   Instantiates the main `telegramHandler.BotHandler` from `internal/presentation/telegram/handler/`.
-    *   **Constructor Injection:** Injects the `telebot.Bot` instance, admin usernames, loaded messages (`*messages.Messages`), and *all* the previously instantiated use case handlers.
+    *   **Constructor Injection:** Injects the `telebot.Bot` instance, admin usernames, loaded messages (`*messages.Messages`), and *all* the previously instantiated use case handlers (including the new `changeModeratorHandler`).
 7.  **Return:** Returns the fully configured `BotHandler` instance.
 
 ## 3. Key Principles Demonstrated
 
 *   **Dependency Inversion:** Components depend on abstractions (interfaces/ports) defined in inner layers (domain), not on concrete implementations from outer layers (adapters, main).
 *   **Composition Root:** A single location (`main.go`) is responsible for composing the application object graph.
-*   **Constructor Injection:** Dependencies are provided through constructors, making dependencies explicit and facilitating testing. 
+*   **Constructor Injection:** Dependencies are provided through constructors, making dependencies explicit and facilitating testing.
+
+## 4. Changes from Original Code
+
+*   Added `ChangeModeratorHandler` instantiation and injection.
+
+## 5. Updated Code
+
+```
+	getPlayerRoomsHandler := roomQuery.NewGetPlayerRoomsHandler(roomRepo)
+	getPlayersInRoomsHandler := roomQuery.NewGetPlayersInRoomHandler(roomRepo)
+	addDescriptionHandler := roomCommand.NewAddDescriptionHandler(roomRepo)
+	changeModeratorHandler := roomCommand.NewChangeModeratorHandler(roomRepo)
+
+	// Scenario Use Cases
+		getPlayerRoomsHandler,
+		getPlayersInRoomsHandler,
+		getRoomHandler,
+		addDescriptionHandler,
+		changeModeratorHandler,
+		createScenarioHandler, 

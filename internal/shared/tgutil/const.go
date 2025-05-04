@@ -24,6 +24,10 @@ const (
 	UniqueKickUserSelect  = "kick_user_select"  // Shows the list of users to kick
 	UniqueKickUserConfirm = "kick_user_confirm" // Confirms kicking the selected user
 
-	// Generic Cancel (might need context)
+	// Change Moderator Flow
+	UniqueChangeModeratorSelect  = "mod_user_select"  // Shows the list of users to make moderator
+	UniqueChangeModeratorConfirm = "mod_user_confirm" // Confirms setting the selected user as moderator
+
+	// Common
 	UniqueCancel = "cancel"
 )

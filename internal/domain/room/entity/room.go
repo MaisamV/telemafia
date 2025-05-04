@@ -69,3 +69,49 @@ func (r *Room) RemovePlayer(playerID sharedEntity.UserID) { // Use imported User
 func (r *Room) SetDescription(descriptionName string, text string) {
 	r.Description[descriptionName] = text
 }
+
+// SetModerator updates the room's moderator, removes the new moderator from the player list if they exist,
+// and adds the previous moderator back to the player list.
+func (r *Room) SetModerator(newModerator *sharedEntity.User) error {
+	if newModerator == nil {
+		return errors.New("new moderator cannot be nil")
+	}
+
+	previousModerator := r.Moderator // Store the previous moderator
+
+	// Set the new moderator
+	r.Moderator = newModerator
+
+	// Check if the new moderator is currently a player and remove them if so
+	pModFound := false
+	found := false
+	playerIndex := -1
+	for i, p := range r.Players {
+		if p.ID == newModerator.ID {
+			found = true
+			playerIndex = i
+			break
+		}
+	}
+
+	if found {
+		// Remove the new moderator from the players list using the found index
+		r.Players = append(r.Players[:playerIndex], r.Players[playerIndex+1:]...)
+	}
+
+	// Add the previous moderator back to the players list, if there was one
+	if previousModerator != nil {
+		for _, p := range r.Players {
+			if p.ID == previousModerator.ID {
+				pModFound = true
+				break
+			}
+		}
+	}
+
+	if previousModerator != nil && !pModFound {
+		r.AddPlayer(previousModerator)
+	}
+
+	return nil
+}

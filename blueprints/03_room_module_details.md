@@ -17,6 +17,7 @@
 *   **`AddPlayer(player *sharedEntity.User)`:** Appends a player to the `Players` slice.
 *   **`RemovePlayer(playerID sharedEntity.UserID)`:** Removes a player by ID from the `Players` slice.
 *   **`SetDescription(descriptionName string, text string)`:** Adds/updates an entry in the `Description` map.
+*   **`SetModerator(newModerator *sharedEntity.User) error`:** Sets the provided user as the new moderator. Removes the new moderator from the player list if they were in it. Adds the *previous* moderator back to the player list (if they existed and are not already present). Returns error if the new moderator is nil.
 
 ## 2. `port/room_repository.go`
 
@@ -55,6 +56,9 @@ Defines the interfaces required by the Room domain to interact with persistence.
 *   **`leave_room.go`:**
     *   `LeaveRoomCommand`: Contains `Requester`, `RoomID`.
     *   `LeaveRoomHandler`: Depends on `RoomRepository` and `event.Publisher`. Calls `RoomRepository.RemovePlayerFromRoom` and publishes `PlayerLeftEvent`.
+*   **`change_moderator.go`:**
+    *   `ChangeModeratorCommand`: Contains `Requester` (*User, admin), `RoomID`, `NewModerator` (*User).
+    *   `ChangeModeratorHandler`: Depends on `RoomRepository`. Handles admin check, fetches room, validates new moderator is not current moderator, calls `room.SetModerator()`, and calls `RoomRepository.UpdateRoom()`.
 
 ## 4. `usecase/query/` (Queries - Data Retrieval)
 
