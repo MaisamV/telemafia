@@ -60,4 +60,25 @@ This function is the core of the DI setup:
 		getRoomHandler,
 		addDescriptionHandler,
 		changeModeratorHandler,
-		createScenarioHandler, 
+		createScenarioHandler,
+		assignRolesHandler,
+		createGameHandler,
+		updateGameHandler,
+		getGamesHandler,
+		getGameByIDHandler,
+		// Initialize maps for interactive selection state and refresh books
+		interactiveSelections:      make(map[gameEntity.GameID]*tgutil.InteractiveSelectionState),
+		playerRoleChoiceRefreshers: make(map[gameEntity.GameID]*tgutil.RefreshingMessageBook),
+		adminAssignmentTrackers:    make(map[gameEntity.GameID]*tgutil.RefreshingMessageBook),
+	}
+
+	botHandler := telegramHandler.NewBotHandler(telebot.Bot{
+		Token:          config.BotToken,
+		AdminUsernames: config.AdminUsernames,
+		Messages:       messages,
+		Handlers:       handlers,
+	})
+
+	botHandler.RegisterHandlers()
+
+	botHandler.Start() 

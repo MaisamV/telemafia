@@ -22,6 +22,14 @@
     3.  Uses a `switch` statement on the `unique` identifier.
     4.  Each `case` corresponds to a specific button type (defined in `tgutil/const.go`, e.g., `tgutil.UniqueCreateGameSelectRoom`, `tgutil.UniqueKickUserSelect`, `tgutil.UniqueChangeModeratorSelect`).
     5.  Calls the relevant **exported handler function** from the appropriate sub-package (e.g., `room.HandleKickUserSelectCallback`, `room.HandleChangeModeratorSelectCallback`), passing the `telebot.Context`, parsed `payload`, and necessary dependencies.
+*   **`handleCallback(c telebot.Context) error`:** Acts as the central dispatcher for *all* inline button callback queries.
+    *   Reads the callback `Unique` identifier and `Data`.
+    *   Uses a `switch` statement on `Unique` to route the callback to the appropriate specialized handler function within the relevant sub-package (`room` or `game`).
+    *   Handles `UniqueCancel` directly by deleting the message.
+    *   **New Callbacks Routed:**
+        *   `tgutil.UniqueChooseCardStart`: Routes to `game.HandleChooseCardStart`.
+        *   `tgutil.UniquePlayerSelectsCard`: Routes to `game.HandlePlayerSelectsCard`.
+        *   `tgutil.UniqueCancelGame`: Now routes to `game.HandleCancelCreateGame`, passing the `BotHandlerInterface` for cleanup.
 
 ## 3. `handler/refresh.go`
 
@@ -89,4 +97,76 @@
 *   **`messages.json` (Root directory):** Contains user-facing strings. Includes keys for the kick flow and change moderator flow (`ChangeModeratorButton`, `ChangeModeratorSelectPrompt`, `ChangeModeratorCallbackSuccess`, `ChangeModeratorCallbackError`, `ChangeModeratorNoCandidates`). Text updated for various flows.
 *   **`messages.go`:** Defines the Go struct mirroring `messages.json`.
 *   **`loader.go`:** Loads messages from JSON.
-*   **Usage:** Injected `*Messages` struct used throughout handlers. 
+*   **Usage:** Injected `*Messages` struct used throughout handlers.
+
+### `handler/game/`
+
+Contains handlers specifically related to game setup and management commands and callbacks.
+
+*   **`callbacks_game.go`:**
+    *   **`HandleCreateGame(getRoomsHandler, c, msgs)`:** `/create_game` command handler. Fetches rooms, prompts user to select a room via inline keyboard.
+    *   **`HandleSelectRoomForCreateGame(getAllScenariosHandler, c, roomID, msgs)`:** Handles room selection callback. Fetches scenarios, prompts user to select a scenario.
+    *   **`HandleSelectScenarioForCreateGame(createGameHandler, getPlayersInRoomHandler, getScenarioByIDHandler, c, roomID, scenarioID, msgs)`:** Handles scenario selection. Creates the game entity, fetches players/scenario for display, shows confirmation message with "Start Game", "Choose Card", and "Cancel" buttons.
+    *   **`HandleStartCreatedGame(assignRolesHandler, bot, c, gameID, msgs)`:** Handles "Start Game" button. Directly assigns roles using `AssignRolesHandler`, sends private messages to players, and updates the original message.
+    *   **`HandleChooseCardStart(h BotHandlerInterface, c, gameID, msgs)`:** (NEW) Handles "Choose Card" button.
+        *   Fetches game, scenario, players.
+        *   Checks permissions (admin/moderator).
+        *   Flattens and shuffles roles.
+        *   Initializes `InteractiveSelectionState` and stores it via `h.SetInteractiveSelectionState`.
+        *   Updates game state to `GameStateRoleSelection`.
+        *   Sends/Edits an initial admin tracking message and adds it to the `adminAssignmentTrackers` book via `h.GetOrCreateAdminAssignmentTracker`.
+        *   Clears old player messages using `h.DeletePlayerRoleRefresher` and sends new role selection messages (with numbered buttons) to each player, adding them to the `playerRoleChoiceRefreshers` book via `h.GetOrCreatePlayerRoleRefresher`.
+    *   **`HandlePlayerSelectsCard(h BotHandlerInterface, c, data, msgs)`:** (NEW) Handles player clicking a numbered role card button.
+        *   Parses `gameID` and `chosenIndex` from callback data.
+        *   Retrieves `InteractiveSelectionState`.
+        *   Locks state, validates selection (not already selected, not taken).
+        *   Updates `TakenIndices` and `Selections` in the state.
+        *   Assigns the role in the `Game` entity via `game.AssignRole` and updates the game.
+        *   Edits the player's original message to show confirmation using `c.Edit`.
+        *   If edit succeeds, removes the player's message from the `playerRoleChoiceRefreshers` book using `playerRefresher.RemoveActiveMessage`.
+        *   Raises refresh needed flags on both admin and player refresh books (`adminRefresher.RaiseRefreshNeeded()`, `playerRefresher.RaiseRefreshNeeded()`).
+        *   Checks if all roles are selected:
+            *   If yes: Updates game state, triggers a final refresh, and cleans up (`DeleteInteractiveSelectionState`, `DeleteAdminAssignmentTracker`, `DeletePlayerRoleRefresher`).
+    *   **`HandleCancelCreateGame(h BotHandlerInterface, c, msgs, gameIDStr)`:** (UPDATED) Handles "Cancel" button during game creation or role selection.
+        *   If `gameIDStr` is provided (cancelled during role select), cleans up state and refresh books (`DeleteInteractiveSelectionState`, `DeleteAdminAssignmentTracker`, `DeletePlayerRoleRefresher`).
+        *   Deletes the original message.
+    *   **`PreparePlayerRoleSelectionMarkup(gameID, roleCount, takenIndices, msgs)`:** (NEW Helper) Creates the `telebot.ReplyMarkup` with numbered buttons for role selection, marking taken roles.
+    *   **`PrepareAdminAssignmentMessage(game, state, players, msgs)`:** (NEW Helper) Creates the text content and cancel button markup for the admin's tracking message, showing role assignment progress.
+*   **`commands_game.go`:** (Contains command handlers like `/assign_roles`, `/games`) - No major changes related to this flow.
+
+### `handler/refresh.go`
+
+*   **`StartRefreshTimer()`:** (UPDATED) The main refresh loop.
+    *   Reduced ticker interval (e.g., 2 seconds) for faster updates.
+    *   Added loops to iterate through `adminAssignmentTrackers` and `playerRoleChoiceRefreshers` maps (using mutexes for safety).
+    *   For each book where `ConsumeRefreshNeeded()` is true:
+        *   Calls `updateMessages` with the book and a message generation function.
+        *   **Admin Message Generator:** Fetches current game/state/players, calls `game.PrepareAdminAssignmentMessage`.
+        *   **Player Message Generator:** Fetches current state, calls `game.PreparePlayerRoleSelectionMarkup`, uses standard prompt text.
+*   **`updateMessages(book, getMessage)`:** Generic function to iterate through messages in a book and attempt to edit them using content from `getMessage`.
+
+### `shared/tgutil/`
+
+*   **`refresh_state.go` (`RefreshingMessageBook`):** Used extensively to manage the lifecycle of the admin tracking message and player selection messages.
+    *   `AddActiveMessage`: Used to store messages.
+    *   `RemoveActiveMessage`: Used to remove the selecting player's message after confirmation.
+    *   `GetAllActiveMessages`: Used by the refresh timer.
+    *   `RaiseRefreshNeeded`, `ConsumeRefreshNeeded`: Used to trigger and check for updates.
+*   **`callback_data.go`:** Defines constants for callback `Unique` identifiers (`UniqueChooseCardStart`, `UniquePlayerSelectsCard`).
+*   **`state.go` (`InteractiveSelectionState`):** (NEW) Holds the state for the interactive role selection process for a specific game.
+    *   `ShuffledRoles`: The randomized list of roles.
+    *   `Selections`: Map of `UserID` to the chosen card index.
+    *   `TakenIndices`: Map of card index to boolean (true if taken).
+    *   `Mutex`: Ensures thread-safe access during selection.
+
+### `messages.json`
+
+*   **New Keys Added under `Game`:**
+    *   `ChooseCardButton`: "🃏 Choose Card"
+    *   `AssignmentTrackingMessageAdmin`: "Role Selection Progress:\n%s\nWaiting for players..."
+    *   `RoleSelectionPromptPlayer`: "Choose your role card:"
+    *   `RoleTakenMarker`: "X"
+    *   `PlayerHasRoleError`: "You have already selected a role."
+    *   `RoleAlreadyTakenError`: "Card %d has already been taken!"
+    *   `AssignRolesSuccessPrivate`: "Your role: *%s* \(%s\)"
+    *   `AllRolesSelectedAdmin`: "All roles selected!\n%s" 

@@ -73,4 +73,27 @@ Defines the interfaces required by the Room domain to interact with persistence.
     *   `GetRoomHandler`: Depends on `RoomReader`. Calls `RoomReader.GetRoomByID`.
 *   **`get_rooms.go`:**
     *   `GetRoomsQuery`: (Currently empty).
-    *   `GetRoomsHandler`: Depends on `RoomReader`. Calls `RoomReader.GetRooms`. 
+    *   `GetRoomsHandler`: Depends on `RoomReader`. Calls `RoomReader.GetRooms`.
+
+#### `internal/domain/game/entity/game.go`
+
+*   **Constants (GameState):**
+    *   `GameStateWaitingForPlayers`
+    *   `GameStateRoleSelection`
+    *   `GameStateInProgress`
+    *   `GameStateFinished`
+
+*   **Struct `Game`:**
+    *   `ID         GameID`
+    *   `Room       *roomEntity.Room`
+    *   `Scenario   *scenarioEntity.Scenario`
+    *   `State      GameState`
+    *   `Assignments map[sharedEntity.UserID]scenarioEntity.Role`
+    *   `Moderator  *sharedEntity.User`
+
+*   **Methods on `Game`:**
+    *   `NewGame(room *roomEntity.Room, scenario *scenarioEntity.Scenario, moderator *sharedEntity.User) *Game`
+    *   `AssignRole(userID sharedEntity.UserID, role scenarioEntity.Role)`
+    *   `SetRolesAssigned()`
+    *   `StartGame()`
+    *   `EndGame()` 
