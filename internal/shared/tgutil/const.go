@@ -15,9 +15,11 @@ const (
 	UniqueConfirmAssignments       = "confirm_assignments"
 	UniqueShowMyRole               = "show_my_role"
 	UniqueGetInviteLink            = "get_invite_link"
-	UniqueCreateGameSelectRoom     = "cg_room"
-	UniqueCreateGameSelectScenario = "cg_scen"
-	UniqueStartGame                = "cg_start"
+	UniqueCreateGameSelectRoom     = "cg_room"     // -> Select Scenario
+	UniqueCreateGameSelectScenario = "cg_scen"     // -> Show Confirmation (Start/Choose/Cancel)
+	UniqueStartGame                = "cg_start"    // -> Assign roles directly
+	UniqueChooseCardStart          = "cg_choose"   // -> Start interactive card selection
+	UniquePlayerSelectsCard        = "cg_sel_card" // Player clicks a numbered card
 	UniqueCancelGame               = "cancel_cg"
 
 	// Kick User Flow

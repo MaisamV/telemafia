@@ -136,7 +136,17 @@
     "StartButton": "🚀 شروع",
     "ListGames": "Active Games:",
     "ListGamesEntry": "ID: %s | Room: '%s' | Scenario: '%s' | State: %s",
-    "NoActiveGames": "There are no active games."
+    "NoActiveGames": "There are no active games.",
+    "ChooseCardButton": "🃏 Choose Card",
+    "RoleSelectionPromptPlayer": "Select your role card:",
+    "AssignmentTrackingMessageAdmin": "Role Selection Progress:\\n%s\\nWaiting for players...",
+    "AssignmentUpdateAdminEntry": "%s: Card %d",
+    "AssignmentPendingAdminEntry": "%s: -",
+    "RoleAlreadyTakenError": "متاسفانه کارت %d توسط شخص دیگری زودتر انتخاب شد.",
+    "PlayerHasRoleError": "شما نقش خود را انتخاب کرده اید.",
+    "RoleSelectedConfirmPlayer": "You have selected Card %d. Your role is: ||**%s** (%s)||.",
+    "AllRolesSelectedAdmin": "All roles selected!\\n%s",
+    "RoleTakenMarker": "❌"
   },
   "refresh": {
     "error_prepare": "Error preparing refresh content for chat %d: %v",

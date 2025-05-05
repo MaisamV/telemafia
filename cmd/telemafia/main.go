@@ -109,6 +109,7 @@ func initializeDependencies(cfg *config.Config, msgs *messages.Messages) (*teleg
 	// Game Use Cases
 	createGameHandler := gameCommand.NewCreateGameHandler(gameRepo, roomClient, scenarioClient)
 	assignRolesHandler := gameCommand.NewAssignRolesHandler(gameRepo, scenarioRepo, roomRepo)
+	updateGameHandler := gameCommand.NewUpdateGameHandler(gameRepo)
 	getGamesHandler := gameQuery.NewGetGamesHandler(gameRepo)
 	getGameByIDHandler := gameQuery.NewGetGameByIDHandler(gameRepo)
 
@@ -137,6 +138,7 @@ func initializeDependencies(cfg *config.Config, msgs *messages.Messages) (*teleg
 		addScenarioJSONHandler,
 		assignRolesHandler,
 		createGameHandler,
+		updateGameHandler,
 		getGamesHandler,
 		getGameByIDHandler,
 	)

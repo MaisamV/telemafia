@@ -148,6 +148,16 @@ type GameMessages struct {
 	StartButton                         string `json:"StartButton"`
 	ListGames                           string `json:"ListGames"`
 	NoActiveGames                       string `json:"NoActiveGames"`
+	ChooseCardButton                    string `json:"ChooseCardButton"`
+	RoleSelectionPromptPlayer           string `json:"RoleSelectionPromptPlayer"`
+	AssignmentTrackingMessageAdmin      string `json:"AssignmentTrackingMessageAdmin"`
+	AssignmentUpdateAdminEntry          string `json:"AssignmentUpdateAdminEntry"`
+	AssignmentPendingAdminEntry         string `json:"AssignmentPendingAdminEntry"`
+	RoleAlreadyTakenError               string `json:"RoleAlreadyTakenError"`
+	PlayerHasRoleError                  string `json:"PlayerHasRoleError"`
+	RoleSelectedConfirmPlayer           string `json:"RoleSelectedConfirmPlayer"`
+	AllRolesSelectedAdmin               string `json:"AllRolesSelectedAdmin"`
+	RoleTakenMarker                     string `json:"RoleTakenMarker"`
 }
 
 type RefreshMessages struct {

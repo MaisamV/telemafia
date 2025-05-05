@@ -41,8 +41,12 @@ func (h *BotHandler) handleCallback(c telebot.Context) error {
 		return game.HandleSelectScenarioForCreateGame(h.createGameHandler, h.getPlayersInRoomHandler, h.getScenarioByIDHandler, c, roomID, scenarioID, h.msgs)
 	case tgutil.UniqueStartGame:
 		return game.HandleStartCreatedGame(h.assignRolesHandler, h.bot, c, data, h.msgs)
+	case tgutil.UniqueChooseCardStart:
+		return game.HandleChooseCardStart(h, c, data, h.msgs)
+	case tgutil.UniquePlayerSelectsCard:
+		return game.HandlePlayerSelectsCard(h, c, data, h.msgs)
 	case tgutil.UniqueCancelGame:
-		return game.HandleCancelCreateGame(c, h.msgs, data)
+		return game.HandleCancelCreateGame(h, c, h.msgs, data)
 
 	// Existing Room Callbacks (assuming tgutil still defines these constants)
 	case tgutil.UniqueJoinRoom:

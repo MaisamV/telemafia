@@ -3,9 +3,11 @@ package telegram
 import (
 	"log"
 	"strings"
+	"sync"
 	"telemafia/internal/shared/tgutil"
 
 	// gameUsecase "telemafia/internal/game/usecase"
+	gameEntity "telemafia/internal/domain/game/entity"
 	gameCommand "telemafia/internal/domain/game/usecase/command"
 	gameQuery "telemafia/internal/domain/game/usecase/query"
 
@@ -16,6 +18,7 @@ import (
 	roomQuery "telemafia/internal/domain/room/usecase/query"
 
 	// scenarioUsecase "telemafia/internal/scenario/usecase"
+
 	scenarioCommand "telemafia/internal/domain/scenario/usecase/command"
 	scenarioQuery "telemafia/internal/domain/scenario/usecase/query"
 
@@ -27,6 +30,8 @@ import (
 	"gopkg.in/telebot.v3"
 )
 
+// InteractiveSelectionState moved to tgutil package
+
 // BotHandler holds dependencies and handles Telegram bot setup
 type BotHandler struct {
 	bot            *telebot.Bot
@@ -36,6 +41,16 @@ type BotHandler struct {
 	// Refresh state management (delegated)
 	roomListRefreshMessage   *tgutil.RefreshingMessageBook
 	roomDetailRefreshMessage *tgutil.RefreshingMessageBook
+
+	// State for "Choose Card" interactive role selection
+	interactiveSelectionsMutex sync.RWMutex                                            // Mutex for the outer map
+	interactiveSelections      map[gameEntity.GameID]*tgutil.InteractiveSelectionState // Use tgutil type
+
+	// Refresh books for interactive role selection
+	playerRefreshMutex         sync.RWMutex // Mutex for player refreshers map
+	playerRoleChoiceRefreshers map[gameEntity.GameID]*tgutil.RefreshingMessageBook
+	adminRefreshMutex          sync.RWMutex // Mutex for admin refreshers map
+	adminAssignmentTrackers    map[gameEntity.GameID]*tgutil.RefreshingMessageBook
 
 	// // Refresh state (moved from repository) - REMOVED
 	// refreshMutex            sync.RWMutex
@@ -62,9 +77,42 @@ type BotHandler struct {
 	addScenarioJSONHandler  *scenarioCommand.AddScenarioJSONHandler // NEW: Inject AddScenarioJSONHandler
 	assignRolesHandler      *gameCommand.AssignRolesHandler         // Use gameCommand
 	createGameHandler       *gameCommand.CreateGameHandler          // Use gameCommand
+	updateGameHandler       *gameCommand.UpdateGameHandler          // ADDED: Update Game Handler
 	getGamesHandler         *gameQuery.GetGamesHandler              // Use gameQuery
 	getGameByIDHandler      *gameQuery.GetGameByIDHandler           // Use gameQuery
 }
+
+// --- Methods implementing BotHandlerInterface --- (NEW)
+
+func (h *BotHandler) GetGameByIDHandler() *gameQuery.GetGameByIDHandler {
+	return h.getGameByIDHandler
+}
+
+func (h *BotHandler) GetPlayersInRoomHandler() *roomQuery.GetPlayersInRoomHandler {
+	return h.getPlayersInRoomHandler
+}
+
+func (h *BotHandler) GetScenarioByIDHandler() *scenarioQuery.GetScenarioByIDHandler {
+	return h.getScenarioByIDHandler
+}
+
+func (h *BotHandler) AssignRolesHandler() *gameCommand.AssignRolesHandler {
+	return h.assignRolesHandler
+}
+
+func (h *BotHandler) Bot() *telebot.Bot {
+	return h.bot
+}
+
+func (h *BotHandler) UpdateGameHandler() *gameCommand.UpdateGameHandler {
+	return h.updateGameHandler
+}
+
+// --- End Interface Methods ---
+
+// --- Refresh Book Management for Game Role Selection ---
+
+// --- End Refresh Book Management ---
 
 // NewBotHandler creates a new BotHandler with all dependencies
 func NewBotHandler(
@@ -90,39 +138,44 @@ func NewBotHandler(
 	addScenarioJSONHandler *scenarioCommand.AddScenarioJSONHandler, // NEW: Inject AddScenarioJSONHandler
 	assignRolesHandler *gameCommand.AssignRolesHandler, // Use gameCommand
 	createGameHandler *gameCommand.CreateGameHandler, // Use gameCommand
+	updateGameHandler *gameCommand.UpdateGameHandler, // ADDED Parameter
 	getGamesHandler *gameQuery.GetGamesHandler, // Use gameQuery
 	getGameByIDHandler *gameQuery.GetGameByIDHandler, // Use gameQuery
 ) *BotHandler {
 	// Set admin users for util package (now moved)
-	tgutil.SetAdminUsers(adminUsernames) // Use tgutil
+	tgutil.SetAdminUsers(adminUsernames)
 
 	h := &BotHandler{
-		bot:                      bot,
-		msgs:                     msgs, // Assign messages
-		adminUsernames:           adminUsernames,
-		roomListRefreshMessage:   tgutil.NewRefreshState(), // Initialize RefreshingMessageBook
-		roomDetailRefreshMessage: tgutil.NewRefreshState(), // Initialize RefreshingMessageBook
-		roomRepo:                 roomRepo,
-		createRoomHandler:        createRoomHandler,
-		joinRoomHandler:          joinRoomHandler,
-		leaveRoomHandler:         leaveRoomHandler,
-		kickUserHandler:          kickUserHandler,
-		deleteRoomHandler:        deleteRoomHandler,
-		getRoomsHandler:          getRoomsHandler,
-		getPlayerRoomsHandler:    getPlayerRoomsHandler,
-		getPlayersInRoomHandler:  getPlayersInRoomHandler,
-		getRoomHandler:           getRoomHandler,
-		addDescriptionHandler:    addDescriptionHandler,  // Assign handler
-		changeModeratorHandler:   changeModeratorHandler, // Assign handler
-		createScenarioHandler:    createScenarioHandler,
-		deleteScenarioHandler:    deleteScenarioHandler,
-		getScenarioByIDHandler:   getScenarioByIDHandler,
-		getAllScenariosHandler:   getAllScenariosHandler,
-		addScenarioJSONHandler:   addScenarioJSONHandler, // NEW: Assign handler
-		assignRolesHandler:       assignRolesHandler,
-		createGameHandler:        createGameHandler,
-		getGamesHandler:          getGamesHandler,
-		getGameByIDHandler:       getGameByIDHandler,
+		bot:                        bot,
+		msgs:                       msgs,
+		adminUsernames:             adminUsernames,
+		roomListRefreshMessage:     tgutil.NewRefreshState(),
+		roomDetailRefreshMessage:   tgutil.NewRefreshState(),
+		interactiveSelections:      make(map[gameEntity.GameID]*tgutil.InteractiveSelectionState), // Use tgutil type
+		playerRoleChoiceRefreshers: make(map[gameEntity.GameID]*tgutil.RefreshingMessageBook),
+		adminAssignmentTrackers:    make(map[gameEntity.GameID]*tgutil.RefreshingMessageBook),
+		roomRepo:                   roomRepo,
+		createRoomHandler:          createRoomHandler,
+		joinRoomHandler:            joinRoomHandler,
+		leaveRoomHandler:           leaveRoomHandler,
+		kickUserHandler:            kickUserHandler,
+		deleteRoomHandler:          deleteRoomHandler,
+		getRoomsHandler:            getRoomsHandler,
+		getPlayerRoomsHandler:      getPlayerRoomsHandler,
+		getPlayersInRoomHandler:    getPlayersInRoomHandler,
+		getRoomHandler:             getRoomHandler,
+		addDescriptionHandler:      addDescriptionHandler,
+		changeModeratorHandler:     changeModeratorHandler,
+		createScenarioHandler:      createScenarioHandler,
+		deleteScenarioHandler:      deleteScenarioHandler,
+		getScenarioByIDHandler:     getScenarioByIDHandler,
+		getAllScenariosHandler:     getAllScenariosHandler,
+		addScenarioJSONHandler:     addScenarioJSONHandler,
+		assignRolesHandler:         assignRolesHandler,
+		createGameHandler:          createGameHandler,
+		updateGameHandler:          updateGameHandler, // ADDED Assignment
+		getGamesHandler:            getGamesHandler,
+		getGameByIDHandler:         getGameByIDHandler,
 	}
 	return h
 }
@@ -256,4 +309,78 @@ func (h *BotHandler) HandleStart(c telebot.Context) error {
 
 func (h *BotHandler) handleDocument(c telebot.Context) error {
 	return HandleDocument(h.addScenarioJSONHandler, c, h.msgs)
+}
+
+// Helper methods to manage interactive state safely (NEW)
+func (h *BotHandler) GetInteractiveSelectionState(gameID gameEntity.GameID) (*tgutil.InteractiveSelectionState, bool) { // Use tgutil type
+	h.interactiveSelectionsMutex.RLock()
+	defer h.interactiveSelectionsMutex.RUnlock()
+	state, exists := h.interactiveSelections[gameID]
+	return state, exists
+}
+
+func (h *BotHandler) SetInteractiveSelectionState(gameID gameEntity.GameID, state *tgutil.InteractiveSelectionState) { // Use tgutil type
+	h.interactiveSelectionsMutex.Lock()
+	defer h.interactiveSelectionsMutex.Unlock()
+	h.interactiveSelections[gameID] = state
+}
+
+func (h *BotHandler) DeleteInteractiveSelectionState(gameID gameEntity.GameID) {
+	h.interactiveSelectionsMutex.Lock()
+	defer h.interactiveSelectionsMutex.Unlock()
+	delete(h.interactiveSelections, gameID)
+}
+
+// Helper methods to manage player role choice refreshers safely (NEW)
+func (h *BotHandler) GetPlayerRoleRefresher(gameID gameEntity.GameID) (*tgutil.RefreshingMessageBook, bool) {
+	h.playerRefreshMutex.RLock()
+	defer h.playerRefreshMutex.RUnlock()
+	book, exists := h.playerRoleChoiceRefreshers[gameID]
+	return book, exists
+}
+
+func (h *BotHandler) GetOrCreatePlayerRoleRefresher(gameID gameEntity.GameID) *tgutil.RefreshingMessageBook {
+	h.playerRefreshMutex.Lock()
+	defer h.playerRefreshMutex.Unlock()
+	book, exists := h.playerRoleChoiceRefreshers[gameID]
+	if !exists {
+		book = tgutil.NewRefreshState()
+		h.playerRoleChoiceRefreshers[gameID] = book
+		log.Printf("Created new Player Role Refresher book for game %s", gameID)
+	}
+	return book
+}
+
+func (h *BotHandler) DeletePlayerRoleRefresher(gameID gameEntity.GameID) {
+	h.playerRefreshMutex.Lock()
+	defer h.playerRefreshMutex.Unlock()
+	delete(h.playerRoleChoiceRefreshers, gameID)
+	log.Printf("Deleted Player Role Refresher book for game %s", gameID)
+}
+
+// Helper methods to manage admin assignment trackers safely (NEW)
+func (h *BotHandler) GetAdminAssignmentTracker(gameID gameEntity.GameID) (*tgutil.RefreshingMessageBook, bool) {
+	h.adminRefreshMutex.RLock()
+	defer h.adminRefreshMutex.RUnlock()
+	book, exists := h.adminAssignmentTrackers[gameID]
+	return book, exists
+}
+
+func (h *BotHandler) GetOrCreateAdminAssignmentTracker(gameID gameEntity.GameID) *tgutil.RefreshingMessageBook {
+	h.adminRefreshMutex.Lock()
+	defer h.adminRefreshMutex.Unlock()
+	book, exists := h.adminAssignmentTrackers[gameID]
+	if !exists {
+		book = tgutil.NewRefreshState()
+		h.adminAssignmentTrackers[gameID] = book
+		log.Printf("Created new Admin Assignment Tracker book for game %s", gameID)
+	}
+	return book
+}
+
+func (h *BotHandler) DeleteAdminAssignmentTracker(gameID gameEntity.GameID) {
+	h.adminRefreshMutex.Lock()
+	defer h.adminRefreshMutex.Unlock()
+	delete(h.adminAssignmentTrackers, gameID)
+	log.Printf("Deleted Admin Assignment Tracker book for game %s", gameID)
 }

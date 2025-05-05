@@ -24,6 +24,8 @@ type GameState string
 const (
 	// GameStateWaitingForPlayers means the game has been created but not started
 	GameStateWaitingForPlayers GameState = "waiting_for_players"
+	// GameStateRoleSelection means the game is in the role selection phase
+	GameStateRoleSelection GameState = "role_selection"
 	// GameStateRolesAssigned means roles have been assigned to players
 	GameStateRolesAssigned GameState = "roles_assigned"
 	// GameStateInProgress means the game is being played
