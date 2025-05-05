@@ -131,17 +131,18 @@ Contains handlers specifically related to game setup and management commands and
         *   If `gameIDStr` is provided (cancelled during role select), cleans up state and refresh books (`DeleteInteractiveSelectionState`, `DeleteAdminAssignmentTracker`, `DeletePlayerRoleRefresher`).
         *   Deletes the original message.
     *   **`PreparePlayerRoleSelectionMarkup(gameID, roleCount, takenIndices, msgs)`:** (NEW Helper) Creates the `telebot.ReplyMarkup` with numbered buttons for role selection, marking taken roles.
-    *   **`PrepareAdminAssignmentMessage(game, state, players, msgs)`:** (NEW Helper) Creates the text content and cancel button markup for the admin's tracking message, showing role assignment progress.
+    *   **`PrepareAdminAssignmentMessage(game, state, msgs)`:** (UPDATED Helper) Creates the text content and `telebot` options (including cancel button markup and `ModeMarkdownV2`) for the admin's tracking message. Shows role assignment progress using MarkdownV2 links for players obtained directly from `state.Selections`. Returns `(string, []interface{}, error)`.
 *   **`commands_game.go`:** (Contains command handlers like `/assign_roles`, `/games`) - No major changes related to this flow.
 
 ### `handler/refresh.go`
 
 *   **`StartRefreshTimer()`:** (UPDATED) The main refresh loop.
-    *   Reduced ticker interval (e.g., 2 seconds) for faster updates.
+    *   Ticker interval potentially adjusted.
+    *   Order of refresh checks might be different.
     *   Added loops to iterate through `adminAssignmentTrackers` and `playerRoleChoiceRefreshers` maps (using mutexes for safety).
     *   For each book where `ConsumeRefreshNeeded()` is true:
         *   Calls `updateMessages` with the book and a message generation function.
-        *   **Admin Message Generator:** Fetches current game/state/players, calls `game.PrepareAdminAssignmentMessage`.
+        *   **Admin Message Generator:** Fetches current game/state (but *not* players list), calls `game.PrepareAdminAssignmentMessage`, returns the generated message string and `opts`.
         *   **Player Message Generator:** Fetches current state, calls `game.PreparePlayerRoleSelectionMarkup`, uses standard prompt text.
 *   **`updateMessages(book, getMessage)`:** Generic function to iterate through messages in a book and attempt to edit them using content from `getMessage`.
 
@@ -153,11 +154,12 @@ Contains handlers specifically related to game setup and management commands and
     *   `GetAllActiveMessages`: Used by the refresh timer.
     *   `RaiseRefreshNeeded`, `ConsumeRefreshNeeded`: Used to trigger and check for updates.
 *   **`callback_data.go`:** Defines constants for callback `Unique` identifiers (`UniqueChooseCardStart`, `UniquePlayerSelectsCard`).
-*   **`state.go` (`InteractiveSelectionState`):** (NEW) Holds the state for the interactive role selection process for a specific game.
+*   **`state.go` (`InteractiveSelectionState`):** (UPDATED) Holds the state for the interactive role selection process for a specific game.
     *   `ShuffledRoles`: The randomized list of roles.
-    *   `Selections`: Map of `UserID` to the chosen card index.
+    *   `Selections`: Map of `UserID` to `PlayerSelection` struct (which contains `ChosenIndex` and the `sharedEntity.User`).
     *   `TakenIndices`: Map of card index to boolean (true if taken).
     *   `Mutex`: Ensures thread-safe access during selection.
+*   **`state.go` (`PlayerSelection`):** (NEW) Struct holding the `ChosenIndex` and the `sharedEntity.User` who made the selection.
 
 ### `messages.json`
 

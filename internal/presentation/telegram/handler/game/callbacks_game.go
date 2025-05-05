@@ -283,7 +283,7 @@ func HandleChooseCardStart(
 	log.Printf("Shuffled Roles: %v", shuffledRoles)
 
 	// 4. Initialize Interactive State
-	initialSelections := make(map[sharedEntity.UserID]int)
+	initialSelections := make(map[sharedEntity.UserID]tgutil.PlayerSelection)
 	initialTaken := make(map[int]bool)
 	newState := &tgutil.InteractiveSelectionState{
 		ShuffledRoles: shuffledRoles,
@@ -301,16 +301,13 @@ func HandleChooseCardStart(
 	}
 
 	// 6. Prepare & Edit Admin's Tracking Message (Placeholder Text for now)
-	adminMsgContent := fmt.Sprintf(msgs.Game.AssignmentTrackingMessageAdmin, "-") // Placeholder
-	adminMarkup := &telebot.ReplyMarkup{}
-	adminMarkup.Inline(adminMarkup.Row(adminMarkup.Data(msgs.Game.CreateGameCancelButton, tgutil.UniqueCancelGame+"|"+string(gameID)))) // Keep cancel
-
+	message, opts, err := PrepareAdminAssignmentMessage(game, newState, msgs)
 	// Edit or Send the admin message
 	// var adminMsg telebot.Editable // No longer needed
-	sentAdminMsg, err := h.Bot().Edit(c.Message(), adminMsgContent, adminMarkup) // Try editing first
-	if err != nil {                                                              // If edit fails...
+	sentAdminMsg, err := h.Bot().Edit(c.Message(), message, opts...) // Try editing first
+	if err != nil {                                                  // If edit fails...
 		log.Printf("ChooseCardStart: Failed to EDIT admin message (%v), trying to SEND new one for %s", err, gameID)
-		sentAdminMsg, err = h.Bot().Send(c.Sender(), adminMsgContent, adminMarkup) // ...try sending new
+		sentAdminMsg, err = h.Bot().Send(c.Sender(), message, opts...) // ...try sending new
 		if err != nil {
 			log.Printf("ChooseCardStart: Failed to SEND new admin message for %s: %v", gameID, err)
 			// If sending also fails, we can't store it. Return error.
@@ -418,7 +415,10 @@ func HandlePlayerSelectsCard(
 
 	// 3. Process Selection
 	state.TakenIndices[chosenIndex] = true
-	state.Selections[player.ID] = chosenIndex
+	state.Selections[player.ID] = tgutil.PlayerSelection{
+		ChosenIndex: chosenIndex,
+		Player:      *player,
+	}
 	selectedRole := state.ShuffledRoles[chosenIndex-1] // Adjust for 0-based index
 
 	log.Printf("Player %d selected card %d (Role: %s) for game %s", player.ID, chosenIndex, selectedRole.Name, gameID)
@@ -560,43 +560,29 @@ func PreparePlayerRoleSelectionMarkup(gameID gameEntity.GameID, roleCount int, t
 }
 
 // PrepareAdminAssignmentMessage creates the text for the admin's tracking message.
-func PrepareAdminAssignmentMessage(game *gameEntity.Game, state *tgutil.InteractiveSelectionState, players []*sharedEntity.User, msgs *messages.Messages) (string, *telebot.ReplyMarkup, error) {
+func PrepareAdminAssignmentMessage(game *gameEntity.Game, state *tgutil.InteractiveSelectionState, msgs *messages.Messages) (string, []interface{}, error) {
 	var assignmentLines []string
 
-	// Create a map for quick lookup of player ID -> player link (Use plain name for now)
-	playerNameMap := make(map[sharedEntity.UserID]string)
-	if players != nil {
-		for _, p := range players {
-			if p != nil {
-				playerNameMap[p.ID] = p.FirstName // Use FirstName instead of GetProfileLink
-			}
-		}
-	}
-
 	// Create a reverse map for selection: index -> playerID
-	selectionMap := make(map[int]sharedEntity.UserID)
-	for userID, index := range state.Selections {
-		selectionMap[index] = userID
+	selectionMap := make(map[int]sharedEntity.User)
+	for _, playerSelection := range state.Selections {
+		selectionMap[playerSelection.ChosenIndex] = playerSelection.Player
 	}
 
 	// Iterate through shuffled roles (cards)
 	for i, role := range state.ShuffledRoles {
 		cardIndex := i + 1
 		// Use plain text formatting
-		line := fmt.Sprintf("%d. %s -> ", cardIndex, role.Name)
+		line := fmt.Sprintf("%d\\. ", cardIndex)
 
 		if state.TakenIndices[cardIndex] {
-			if playerID, ok := selectionMap[cardIndex]; ok {
-				if playerName, nameOk := playerNameMap[playerID]; nameOk {
-					line += playerName // Append player name
-				} else {
-					line += fmt.Sprintf("User %d", playerID) // Fallback to ID
-				}
+			if player, ok := selectionMap[cardIndex]; ok {
+				line += fmt.Sprintf("%s \\-\\> %s", player.GetProfileLink(), role.Name) // Fallback to ID
 			} else {
 				line += "(Error: Taken but no player found)"
 			}
 		} else {
-			line += "-"
+			line += "?"
 		}
 		assignmentLines = append(assignmentLines, line)
 	}
@@ -610,12 +596,17 @@ func PrepareAdminAssignmentMessage(game *gameEntity.Game, state *tgutil.Interact
 		messageText = fmt.Sprintf("All roles selected!\n%s", strings.Join(assignmentLines, "\n"))
 	} else {
 		// Use simplified message key without Markdown
-		messageText = fmt.Sprintf("Role Selection Progress:\n%s\nWaiting for players...", strings.Join(assignmentLines, "\n"))
+		messageText = fmt.Sprintf("Role Selection Progress:\n%s\nWaiting for players\\.\\.\\.", strings.Join(assignmentLines, "\n"))
 		// Add cancel button
 		if game != nil {
 			markup.Inline(markup.Row(markup.Data(msgs.Game.CreateGameCancelButton, tgutil.UniqueCancelGame+"|"+string(game.ID))))
 		}
 	}
 
-	return messageText, markup, nil
+	opts := []interface{}{
+		markup,
+		telebot.ModeMarkdownV2,
+		telebot.NoPreview, // Keep it plain text for now
+	}
+	return messageText, opts, nil
 }

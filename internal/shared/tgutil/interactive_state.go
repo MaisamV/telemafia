@@ -10,6 +10,11 @@ import (
 type InteractiveSelectionState struct {
 	Mutex         sync.Mutex
 	ShuffledRoles []scenarioEntity.Role
-	Selections    map[sharedEntity.UserID]int // playerID -> chosenIndex (1-based)
-	TakenIndices  map[int]bool                // chosenIndex (1-based) -> true
+	Selections    map[sharedEntity.UserID]PlayerSelection // playerID -> chosenIndex (1-based)
+	TakenIndices  map[int]bool                            // chosenIndex (1-based) -> true
+}
+
+type PlayerSelection struct {
+	ChosenIndex int
+	Player      sharedEntity.User
 }

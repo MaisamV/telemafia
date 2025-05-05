@@ -6,12 +6,11 @@ import (
 	"strings" // Import messages
 	gameEntity "telemafia/internal/domain/game/entity"
 	gameQuery "telemafia/internal/domain/game/usecase/query"
-	roomQuery "telemafia/internal/domain/room/usecase/query"
+	game "telemafia/internal/presentation/telegram/handler/game"
 	"telemafia/internal/shared/entity"
 	"telemafia/internal/shared/tgutil"
 	"time"
 
-	game "telemafia/internal/presentation/telegram/handler/game"
 	roomHandler "telemafia/internal/presentation/telegram/handler/room"
 
 	"gopkg.in/telebot.v3"
@@ -50,9 +49,58 @@ func (h *BotHandler) updateMessages(book *tgutil.RefreshingMessageBook, getMessa
 // StartRefreshTimer handles updating dynamic messages.
 // It periodically checks the RefreshingMessageBook and updates all active messages if changes occurred.
 func (h *BotHandler) StartRefreshTimer() {
-	ticker := time.NewTicker(2 * time.Second) // Reduced interval for faster feedback during testing
+	ticker := time.NewTicker(1 * time.Second) // Reduced interval for faster feedback during testing
 	defer ticker.Stop()
 	for range ticker.C {
+
+		// --- Game Admin Assignment Tracker Refresh ---
+		h.adminRefreshMutex.RLock() // Lock for reading the map
+		for gameID, book := range h.adminAssignmentTrackers {
+			if book.ConsumeRefreshNeeded() {
+				log.Printf("Refresh needed for Admin Tracker Game ID: %s", gameID)
+				h.updateMessages(book, func(user int64, data string) (string, []interface{}, error) {
+					gameIDFromData := gameEntity.GameID(data)
+					// Fetch necessary data (Game, State, Players) - May need error handling
+					gameData, _ := h.GetGameByIDHandler().Handle(context.Background(), gameQuery.GetGameByIDQuery{ID: gameIDFromData})
+					state, stateExists := h.GetInteractiveSelectionState(gameIDFromData)
+
+					if gameData == nil || !stateExists {
+						log.Printf("Refresh Admin: Game %s or State not found.", gameIDFromData)
+						return "Error: Game data unavailable.", []interface{}{}, nil // Return error state message
+					}
+					// Prepare message content using the helper from callbacks_game
+					return game.PrepareAdminAssignmentMessage(gameData, state, h.msgs)
+				})
+			}
+		}
+		h.adminRefreshMutex.RUnlock()
+
+		// --- Game Player Role Choice Refresh ---
+		h.playerRefreshMutex.RLock() // Lock for reading the map
+		for gameID, book := range h.playerRoleChoiceRefreshers {
+			if book.ConsumeRefreshNeeded() {
+				log.Printf("Refresh needed for Player Choice Game ID: %s", gameID)
+				h.updateMessages(book, func(user int64, data string) (string, []interface{}, error) {
+					gameIDFromData := gameEntity.GameID(data)
+					// Fetch necessary data (State)
+					state, stateExists := h.GetInteractiveSelectionState(gameIDFromData)
+					if !stateExists {
+						log.Printf("Refresh Player: State for game %s not found.", gameIDFromData)
+						return "Role selection is no longer active.", []interface{}{}, nil // Return inactive state message
+					}
+
+					// Prepare markup using the helper from callbacks_game
+					markup, err := game.PreparePlayerRoleSelectionMarkup(gameIDFromData, len(state.ShuffledRoles), state.TakenIndices, h.msgs)
+					message := h.msgs.Game.RoleSelectionPromptPlayer // Keep the prompt same, just update buttons
+					opts := []interface{}{
+						markup,
+					}
+					return message, opts, err
+				})
+			}
+		}
+		h.playerRefreshMutex.RUnlock()
+
 		// --- Room List Refresh ---
 		if h.roomListRefreshMessage.ConsumeRefreshNeeded() {
 			h.updateMessages(h.roomListRefreshMessage, func(user int64, data string) (string, []interface{}, error) {
@@ -87,59 +135,5 @@ func (h *BotHandler) StartRefreshTimer() {
 				return message, opts, err
 			})
 		}
-
-		// --- Game Admin Assignment Tracker Refresh ---
-		h.adminRefreshMutex.RLock() // Lock for reading the map
-		for gameID, book := range h.adminAssignmentTrackers {
-			if book.ConsumeRefreshNeeded() {
-				log.Printf("Refresh needed for Admin Tracker Game ID: %s", gameID)
-				h.updateMessages(book, func(user int64, data string) (string, []interface{}, error) {
-					gameIDFromData := gameEntity.GameID(data)
-					// Fetch necessary data (Game, State, Players) - May need error handling
-					gameData, _ := h.GetGameByIDHandler().Handle(context.Background(), gameQuery.GetGameByIDQuery{ID: gameIDFromData})
-					state, stateExists := h.GetInteractiveSelectionState(gameIDFromData)
-					players, _ := h.GetPlayersInRoomHandler().Handle(context.Background(), roomQuery.GetPlayersInRoomQuery{RoomID: gameData.Room.ID})
-
-					if gameData == nil || !stateExists {
-						log.Printf("Refresh Admin: Game %s or State not found.", gameIDFromData)
-						return "Error: Game data unavailable.", []interface{}{}, nil // Return error state message
-					}
-					// Prepare message content using the helper from callbacks_game
-					message, markup, err := game.PrepareAdminAssignmentMessage(gameData, state, players, h.msgs)
-					opts := []interface{}{
-						markup,
-						telebot.NoPreview, // Keep it plain text for now
-					}
-					return message, opts, err
-				})
-			}
-		}
-		h.adminRefreshMutex.RUnlock()
-
-		// --- Game Player Role Choice Refresh ---
-		h.playerRefreshMutex.RLock() // Lock for reading the map
-		for gameID, book := range h.playerRoleChoiceRefreshers {
-			if book.ConsumeRefreshNeeded() {
-				log.Printf("Refresh needed for Player Choice Game ID: %s", gameID)
-				h.updateMessages(book, func(user int64, data string) (string, []interface{}, error) {
-					gameIDFromData := gameEntity.GameID(data)
-					// Fetch necessary data (State)
-					state, stateExists := h.GetInteractiveSelectionState(gameIDFromData)
-					if !stateExists {
-						log.Printf("Refresh Player: State for game %s not found.", gameIDFromData)
-						return "Role selection is no longer active.", []interface{}{}, nil // Return inactive state message
-					}
-
-					// Prepare markup using the helper from callbacks_game
-					markup, err := game.PreparePlayerRoleSelectionMarkup(gameIDFromData, len(state.ShuffledRoles), state.TakenIndices, h.msgs)
-					message := h.msgs.Game.RoleSelectionPromptPlayer // Keep the prompt same, just update buttons
-					opts := []interface{}{
-						markup,
-					}
-					return message, opts, err
-				})
-			}
-		}
-		h.playerRefreshMutex.RUnlock()
 	}
 }
