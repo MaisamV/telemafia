@@ -38,15 +38,29 @@
     *   If state was changed that affects a dynamic message, call `notifier.RaiseRefreshNeeded()`.
 *   **Callback Data Format:** Use `unique|payload` format. Generate data using `fmt.Sprintf("%s|%s", tgutil.UniqueCallbackName, payload)`.
 
-## 5.4. Dynamic Message Refreshing
+## 5.4. Dynamic Message Refreshing (Rule)
 
-*   **Mechanism:** Uses `RefreshingMessageBook` from `internal/shared/tgutil/refresh_state.go`.
-*   **State:** `BotHandler` holds `RefreshingMessageBook` instances.
-*   **Triggering:** Command/Callback handlers that modify state relevant to a dynamic message **MUST** call `RaiseRefreshNeeded()` on the appropriate `RefreshingMessageBook` instance (passed via the `RefreshNotifier` interface).
-*   **Updating:** The background timer in `refresh.go` periodically calls message preparation functions (e.g., `room.PrepareRoomListMessage`, `room.RoomDetailMessage`) and uses `bot.Edit` to update tracked messages.
-*   **Message Preparation:** Functions like `PrepareRoomListMessage` are responsible for fetching current data and formatting the message text and `telebot.ReplyMarkup`.
-*   **Tracking:** Handlers that send *new* dynamic messages should add them to the relevant `RefreshingMessageBook` using `AddActiveMessage`.
-*   **Untracking:** Handlers or callbacks that invalidate a dynamic message (e.g., leaving a room makes the room detail message obsolete) should remove it using `RemoveActiveMessage`.
+*   **Rule:** Any message in the Telegram presentation layer that needs to be dynamically updated based on state changes **MUST** use the `tgutil.RefreshingMessageBook` pattern.
+*   **Mechanism:** This pattern centralizes refresh logic and ensures consistent handling of dynamic updates.
+*   **Implementation Steps:**
+    1.  **Identify Scope:** Determine the scope (e.g., per-room, per-game). Create a map in `BotHandler` (e.g., `adminAssignmentTrackers map[gameEntity.GameID]*tgutil.RefreshingMessageBook`) to hold `RefreshingMessageBook` instances, keyed by the scope identifier. Protect this map with a `sync.RWMutex`.
+    2.  **Manage Books:** Implement `Get/GetOrCreate/Delete` helper methods on `BotHandler` for the map to manage book lifecycles safely.
+    3.  **Store Messages:** When sending/editing the refreshing message, get the book (`GetOrCreate...`), create a `tgutil.RefreshingMessage{ChatID, MessageID, Data}`, and store it using `book.AddActiveMessage(chatID, refreshMsg)`.
+    4.  **Trigger Refresh:** Handlers/callbacks modifying state **MUST** get the relevant book and call `book.RaiseRefreshNeeded()`.
+    5.  **Implement Refresh Logic (`refresh.go`):**
+        *   In `StartRefreshTimer()`, add a loop over the new map in `BotHandler` (using mutex).
+        *   Check `book.ConsumeRefreshNeeded()`.
+        *   If true, call `h.updateMessages(book, messageGeneratorFunc)`.
+        *   The `messageGeneratorFunc` **MUST**:
+            *   Accept `user int64`, `data string`.
+            *   Parse scope ID from `data`.
+            *   Fetch required current state (using Query Handlers).
+            *   Call the exported **message preparation function** (e.g., `game.PrepareAdminAssignmentMessage`) to get `message` string and `markup`.
+            *   Return `message`, `opts []interface{}`, `error`.
+    6.  **Implement Message Preparation:** Exported functions (e.g., `game.PrepareAdminAssignmentMessage`) fetch data and format message text/markup.
+    7.  **Cleanup:**
+        *   Use the `Delete...` book helper method when the message scope is no longer valid (e.g., game ends).
+        *   Use `book.RemoveActiveMessage(chatID)` when a *specific* user's message in the book is finalized or invalidated (e.g., player confirms role choice).
 
 ## 5.5. Messages
 
