@@ -40,11 +40,6 @@ func NewAssignRolesHandler(gameRepo gamePort.GameRepository, scenarioRepo scenar
 
 // Handle processes the assign roles command
 func (h *AssignRolesHandler) Handle(ctx context.Context, cmd AssignRolesCommand) (map[sharedEntity.User]scenarioEntity.Role, error) { // Updated return type
-	// --- Permission Check ---
-	if !cmd.Requester.Admin {
-		return nil, errors.New("assign roles: admin privilege required")
-	}
-
 	// Get the game by ID
 	game, err := h.gameRepo.GetGameByID(cmd.GameID)
 	if err != nil {
@@ -53,6 +48,16 @@ func (h *AssignRolesHandler) Handle(ctx context.Context, cmd AssignRolesCommand)
 	}
 
 	log.Printf("Found game '%s' for room '%s'", game.ID, game.Room.ID)
+
+	// --- Permission Check ---
+	// Must have room info to check moderator status
+	if game.Room == nil {
+		return nil, errors.New("assign roles: game has no associated room")
+	}
+	isRoomModerator := game.Room.Moderator != nil && game.Room.Moderator.ID == cmd.Requester.ID
+	if !cmd.Requester.Admin && !isRoomModerator {
+		return nil, errors.New("assign roles: permission denied (requires admin or room moderator)")
+	}
 
 	// Fetch the scenario to get its roles
 	if game.Scenario == nil {
@@ -81,10 +86,7 @@ func (h *AssignRolesHandler) Handle(ctx context.Context, cmd AssignRolesCommand)
 	})
 
 	// Fetch players from the game's room
-	if game.Room == nil {
-		log.Printf("Game '%s' has no room assigned", game.ID)
-		return nil, errors.New("game has no room assigned")
-	}
+	// Room presence already checked above
 	players, err := h.roomRepo.GetPlayersInRoom(game.Room.ID)
 	if err != nil {
 		log.Printf("Error fetching players for room '%s': %v", game.Room.ID, err)

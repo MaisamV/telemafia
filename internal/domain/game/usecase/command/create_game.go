@@ -42,11 +42,6 @@ func NewCreateGameHandler(repo gamePort.GameRepository, roomClient gamePort.Room
 
 // Handle processes the create game command
 func (h *CreateGameHandler) Handle(ctx context.Context, cmd CreateGameCommand) (*gameEntity.Game, error) {
-	// --- Permission Check ---
-	if !cmd.Requester.Admin {
-		return nil, errors.New("create game: admin privilege required")
-	}
-
 	// Fetch the actual Room and Scenario entities using the clients
 	room, err := h.roomClient.FetchRoom(cmd.RoomID)
 	if err != nil {
@@ -55,6 +50,13 @@ func (h *CreateGameHandler) Handle(ctx context.Context, cmd CreateGameCommand) (
 	scenario, err := h.scenarioClient.FetchScenario(cmd.ScenarioID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch scenario %s for game creation: %w", cmd.ScenarioID, err)
+	}
+
+	// --- Permission Check ---
+	// Allow if requester is global admin OR the moderator of this specific room
+	isRoomModerator := room.Moderator != nil && room.Moderator.ID == cmd.Requester.ID
+	if !cmd.Requester.Admin && !isRoomModerator {
+		return nil, errors.New("create game: permission denied (requires admin or room moderator)")
 	}
 
 	// Create a new game entity

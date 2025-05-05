@@ -6,58 +6,48 @@
 
 ## 1. `entity/game.go`
 
-*   **`GameID` (type `string`):** Unique identifier for a game instance.
-*   **`GameState` (type `string`):** Represents the game's current state (constants: `GameStateWaitingForPlayers`, `GameStateRolesAssigned`, `GameStateInProgress`, `GameStateFinished`).
+*   **`GameID` (type `string`):** Unique identifier for a game.
+*   **`GameState` (type `string`):** Represents the current state of the game (e.g., `WaitingForPlayers`, `RolesAssigned`, `InProgress`, `Finished`). Defined constants for states.
 *   **`Game` struct:**
-    *   Fields: `ID` (GameID), `State` (GameState), `Room` (*roomEntity.Room), `Scenario` (*scenarioEntity.Scenario), `Assignments` (map[sharedEntity.UserID]scenarioEntity.Role).
-    *   `Room`, `Scenario`: Pointers to the specific Room and Scenario entities associated with this game instance.
-    *   `Assignments`: Maps `UserID` to the `scenarioEntity.Role` assigned to that user.
-*   **Methods:** `AssignRole()`, `SetRolesAssigned()`, `StartGame()`, `FinishGame()` modify the `Assignments` map or `State` field.
+    *   Fields: `ID` (GameID), `Room` (*roomEntity.Room), `Scenario` (*scenarioEntity.Scenario), `State` (GameState), `Assignments` (map[sharedEntity.UserID]scenarioEntity.Role).
+    *   `Assignments`: Maps player UserIDs to their assigned Role (which includes Name and Side).
+*   **`AssignRole(playerID UserID, role Role)`:** Adds/updates an entry in the `Assignments` map.
+*   **`SetRolesAssigned()`:** Sets the `State` to `GameStateRolesAssigned`.
+*   **(Other state transition methods as needed...)**
 
-## 2. `port/` (Ports)
+## 2. `port/game_repository.go`
 
-Defines interfaces required by the Game domain.
+Defines the interfaces required by the Game domain to interact with persistence and other domain services (via clients).
 
-*   **`game_repository.go`:**
-    *   `GameReader` interface: `GetGameByID(id GameID)`, `GetGameByRoomID(roomID roomEntity.RoomID)`, `GetAllGames()`.
-    *   `GameWriter` interface: `CreateGame(game *Game)`, `UpdateGame(game *Game)`, `DeleteGame(id GameID)`.
-    *   `GameRepository` interface: Embeds `GameReader` and `GameWriter`.
-*   **`room_client.go`:**
-    *   `RoomClient` interface: `FetchRoom(id roomEntity.RoomID) (*roomEntity.Room, error)`.
-    *   Abstracts fetching room data. Allows the Game domain to get room details without depending directly on the Room repository implementation. Used by `CreateGameHandler` and potentially `AssignRolesHandler`.
-*   **`scenario_client.go`:**
-    *   `ScenarioClient` interface: `FetchScenario(id string) (*scenarioEntity.Scenario, error)`.
-    *   Abstracts fetching scenario data. Used by `CreateGameHandler` and `AssignRolesHandler`.
+*   **`GameReader` interface:**
+    *   `GetGameByID(id GameID) (*Game, error)`
+    *   `GetGamesByState(state GameState) ([]*Game, error)`
+    *   `GetAllGames() ([]*Game, error)`
+    *   `GetGameByRoomID(roomID roomEntity.RoomID) (*Game, error)`
+*   **`GameWriter` interface:**
+    *   `CreateGame(game *Game) error`
+    *   `UpdateGame(game *Game) error`
+    *   `DeleteGame(id GameID) error`
+*   **`GameRepository` interface:** Embeds `GameReader` and `GameWriter`.
+*   **`RoomClient` interface:** (Client for interacting with Room domain - potentially external service)
+    *   `FetchRoom(id roomEntity.RoomID) (*roomEntity.Room, error)`
+*   **`ScenarioClient` interface:** (Client for interacting with Scenario domain - potentially external service)
+    *   `FetchScenario(id string) (*scenarioEntity.Scenario, error)`
 
 ## 3. `usecase/command/` (Commands - State Changing)
 
 *   **`assign_roles.go`:**
-    *   `AssignRolesCommand`: Contains `Requester`, `GameID`.
-    *   `AssignRolesHandler`: Depends on `GameRepository`, `ScenarioReader` (or `ScenarioClient`), `RoomReader` (or `RoomClient`).
-        *   Handles admin check.
-        *   Fetches `Game`, `Scenario`, and Players (via `RoomReader` using `Game.Room.ID`).
-        *   Validates player count matches role count from the scenario.
-        *   Flattens roles from the `Scenario` struct.
-        *   Uses `common.Shuffle` to randomize the order of the flattened roles.
-        *   Assigns the shuffled roles to sorted players (by UserID).
-        *   Updates the `Game.Assignments` map and sets `Game.State` to `GameStateRolesAssigned`.
-        *   Calls `GameRepository.UpdateGame`.
-        *   Returns the assignments map `map[sharedEntity.User]scenarioEntity.Role` (Note: key is the `User` struct).
+    *   `AssignRolesCommand`: Contains `Requester` (User), `GameID`.
+    *   `AssignRolesHandler`: Depends on `GameRepository`, `ScenarioReader`, `RoomReader`. Fetches game, performs permission check (global admin OR moderator of the game's room), fetches scenario and players, checks player/role count match, shuffles roles, updates game `Assignments` map, sets game state, updates game in repository. Returns the assignments map.
 *   **`create_game.go`:**
-    *   `CreateGameCommand`: Contains `Requester`, `RoomID`, `ScenarioID`.
-    *   `CreateGameHandler`: Depends on `GameRepository`, `RoomClient`, `ScenarioClient`.
-        *   Handles admin check.
-        *   Uses `RoomClient` and `ScenarioClient` to fetch the actual `Room` and `Scenario` entities.
-        *   Creates a new `Game` entity, associating the fetched Room and Scenario, setting initial state to `GameStateWaitingForPlayers`.
-        *   Generates a unique `GameID`.
-        *   Calls `GameRepository.CreateGame`.
-        *   Returns the created `*Game` entity.
+    *   `CreateGameCommand`: Contains `Requester` (User), `RoomID`, `ScenarioID`.
+    *   `CreateGameHandler`: Depends on `GameRepository`, `RoomClient`, `ScenarioClient`. Fetches room and scenario via clients, performs permission check (global admin OR moderator of the fetched room), creates new `Game` entity, saves game via repository. Returns the created game.
 
 ## 4. `usecase/query/` (Queries - Data Retrieval)
 
-*   **`get_game_by_id.go`:**
-    *   `GetGameByIDQuery`: Contains `ID` (GameID).
+*   **`get_game.go`:**
+    *   `GetGameByIDQuery`: Contains `GameID`.
     *   `GetGameByIDHandler`: Depends on `GameReader`. Calls `GameReader.GetGameByID`.
 *   **`get_games.go`:**
-    *   `GetGamesQuery`: (Empty).
-    *   `GetGamesHandler`: Depends on `GameReader`. Calls `GameReader.GetAllGames`. 
+    *   `GetGamesQuery`: Contains `State` (optional filter).
+    *   `GetGamesHandler`: Depends on `GameReader`. Calls `GetGamesByState` or `GetAllGames` based on query. 
