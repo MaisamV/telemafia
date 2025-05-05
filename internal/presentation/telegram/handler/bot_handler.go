@@ -1,9 +1,11 @@
 package telegram
 
 import (
+	"context"
 	"log"
 	"strings"
 	"sync"
+	"telemafia/internal/shared/entity"
 	"telemafia/internal/shared/tgutil"
 
 	// gameUsecase "telemafia/internal/game/usecase"
@@ -146,11 +148,36 @@ func NewBotHandler(
 	tgutil.SetAdminUsers(adminUsernames)
 
 	h := &BotHandler{
-		bot:                        bot,
-		msgs:                       msgs,
-		adminUsernames:             adminUsernames,
-		roomListRefreshMessage:     tgutil.NewRefreshState(),
-		roomDetailRefreshMessage:   tgutil.NewRefreshState(),
+		bot:            bot,
+		msgs:           msgs,
+		adminUsernames: adminUsernames,
+		roomListRefreshMessage: tgutil.NewRefreshState(func(user int64, data string) (string, []interface{}, error) {
+			message, markup, err := room.PrepareRoomListMessage(
+				getRoomsHandler,
+				getPlayersInRoomHandler,
+				msgs,
+			)
+			opts := []interface{}{
+				markup,
+				telebot.NoPreview,
+			}
+			return message, opts, err
+		}),
+		roomDetailRefreshMessage: tgutil.NewRefreshState(func(user int64, data string) (string, []interface{}, error) {
+			message, markup, err := room.RoomDetailMessage(
+				getRoomsHandler,
+				getPlayersInRoomHandler,
+				msgs,
+				entity.UserID(user),
+				data,
+			)
+			opts := []interface{}{
+				markup,
+				telebot.ModeMarkdownV2,
+				telebot.NoPreview,
+			}
+			return message, opts, err
+		}),
 		interactiveSelections:      make(map[gameEntity.GameID]*tgutil.InteractiveSelectionState), // Use tgutil type
 		playerRoleChoiceRefreshers: make(map[gameEntity.GameID]*tgutil.RefreshingMessageBook),
 		adminAssignmentTrackers:    make(map[gameEntity.GameID]*tgutil.RefreshingMessageBook),
@@ -344,7 +371,23 @@ func (h *BotHandler) GetOrCreatePlayerRoleRefresher(gameID gameEntity.GameID) *t
 	defer h.playerRefreshMutex.Unlock()
 	book, exists := h.playerRoleChoiceRefreshers[gameID]
 	if !exists {
-		book = tgutil.NewRefreshState()
+		book = tgutil.NewRefreshState(func(user int64, data string) (string, []interface{}, error) {
+			gameIDFromData := gameEntity.GameID(data)
+			// Fetch necessary data (State)
+			state, stateExists := h.GetInteractiveSelectionState(gameIDFromData)
+			if !stateExists {
+				log.Printf("Refresh Player: State for game %s not found.", gameIDFromData)
+				return "Role selection is no longer active.", []interface{}{}, nil // Return inactive state message
+			}
+
+			// Prepare markup using the helper from callbacks_game
+			markup, err := game.PreparePlayerRoleSelectionMarkup(gameIDFromData, len(state.ShuffledRoles), state.TakenIndices, h.msgs)
+			message := h.msgs.Game.RoleSelectionPromptPlayer // Keep the prompt same, just update buttons
+			opts := []interface{}{
+				markup,
+			}
+			return message, opts, err
+		})
 		h.playerRoleChoiceRefreshers[gameID] = book
 		log.Printf("Created new Player Role Refresher book for game %s", gameID)
 	}
@@ -371,7 +414,19 @@ func (h *BotHandler) GetOrCreateAdminAssignmentTracker(gameID gameEntity.GameID)
 	defer h.adminRefreshMutex.Unlock()
 	book, exists := h.adminAssignmentTrackers[gameID]
 	if !exists {
-		book = tgutil.NewRefreshState()
+		book = tgutil.NewRefreshState(func(user int64, data string) (string, []interface{}, error) {
+			gameIDFromData := gameEntity.GameID(data)
+			// Fetch necessary data (Game, State, Players) - May need error handling
+			gameData, _ := h.GetGameByIDHandler().Handle(context.Background(), gameQuery.GetGameByIDQuery{ID: gameIDFromData})
+			state, stateExists := h.GetInteractiveSelectionState(gameIDFromData)
+
+			if gameData == nil || !stateExists {
+				log.Printf("Refresh Admin: Game %s or State not found.", gameIDFromData)
+				return "Error: Game data unavailable.", []interface{}{}, nil // Return error state message
+			}
+			// Prepare message content using the helper from callbacks_game
+			return game.PrepareAdminAssignmentMessage(gameData, state, h.msgs)
+		})
 		h.adminAssignmentTrackers[gameID] = book
 		log.Printf("Created new Admin Assignment Tracker book for game %s", gameID)
 	}

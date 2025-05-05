@@ -11,6 +11,7 @@ type RefreshingMessageBook struct {
 	needsRefresh bool
 	// activeMessages maps chatID to the message currently showing the dynamic list.
 	activeMessages map[int64]*RefreshingMessage
+	GetMessage     func(user int64, data string) (string, []interface{}, error)
 }
 
 type RefreshingMessage struct {
@@ -20,9 +21,10 @@ type RefreshingMessage struct {
 }
 
 // NewRefreshState creates a new RefreshingMessageBook manager.
-func NewRefreshState() *RefreshingMessageBook {
+func NewRefreshState(getMessage func(user int64, data string) (string, []interface{}, error)) *RefreshingMessageBook {
 	return &RefreshingMessageBook{
 		activeMessages: make(map[int64]*RefreshingMessage),
+		GetMessage:     getMessage,
 	}
 }
 

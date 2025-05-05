@@ -70,6 +70,17 @@ This function is the core of the DI setup:
 		interactiveSelections:      make(map[gameEntity.GameID]*tgutil.InteractiveSelectionState),
 		playerRoleChoiceRefreshers: make(map[gameEntity.GameID]*tgutil.RefreshingMessageBook),
 		adminAssignmentTrackers:    make(map[gameEntity.GameID]*tgutil.RefreshingMessageBook),
+		// Pass message generation logic when initializing global refresh books
+		roomListRefreshMessage: tgutil.NewRefreshState(func(user int64, data string) (string, []interface{}, error) {
+			message, markup, err := room.PrepareRoomListMessage(getRoomsHandler, getPlayersInRoomsHandler, msgs)
+			opts := []interface{}{markup, telebot.NoPreview}
+			return message, opts, err
+		}),
+		roomDetailRefreshMessage: tgutil.NewRefreshState(func(user int64, data string) (string, []interface{}, error) {
+			message, markup, err := room.RoomDetailMessage(getRoomsHandler, getPlayersInRoomsHandler, msgs, entity.UserID(user), data)
+			opts := []interface{}{markup, telebot.ModeMarkdownV2, telebot.NoPreview}
+			return message, opts, err
+		}),
 	}
 
 	botHandler := telegramHandler.NewBotHandler(telebot.Bot{

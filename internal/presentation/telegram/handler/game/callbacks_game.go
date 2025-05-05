@@ -212,6 +212,7 @@ type BotHandlerInterface interface {
 	GetOrCreateAdminAssignmentTracker(gameID gameEntity.GameID) *tgutil.RefreshingMessageBook
 	GetAdminAssignmentTracker(gameID gameEntity.GameID) (*tgutil.RefreshingMessageBook, bool)
 	DeleteAdminAssignmentTracker(gameID gameEntity.GameID)
+	RefreshMessages(book *tgutil.RefreshingMessageBook)
 }
 
 // HandleChooseCardStart initiates the interactive role selection process.
@@ -476,8 +477,7 @@ func HandlePlayerSelectsCard(
 			}
 		}
 		// Trigger one last refresh to show the final state
-		adminRefresher.RaiseRefreshNeeded()
-		playerRefresher.RaiseRefreshNeeded()
+		h.RefreshMessages(adminRefresher)
 		log.Printf("All roles selected: Triggering final refresh and cleanup for game %s", gameID)
 
 		// Clean up state and refreshers
@@ -577,7 +577,7 @@ func PrepareAdminAssignmentMessage(game *gameEntity.Game, state *tgutil.Interact
 
 		if state.TakenIndices[cardIndex] {
 			if player, ok := selectionMap[cardIndex]; ok {
-				line += fmt.Sprintf("%s \\-\\> %s", player.GetProfileLink(), role.Name) // Fallback to ID
+				line += fmt.Sprintf("%s \\-\\> ||%s||", player.GetProfileLink(), role.Name) // Fallback to ID
 			} else {
 				line += "(Error: Taken but no player found)"
 			}
@@ -593,7 +593,7 @@ func PrepareAdminAssignmentMessage(game *gameEntity.Game, state *tgutil.Interact
 
 	if allSelected {
 		// Use simplified message key without Markdown
-		messageText = fmt.Sprintf("All roles selected!\n%s", strings.Join(assignmentLines, "\n"))
+		messageText = fmt.Sprintf("All roles selected\\!\n||%s||", strings.Join(assignmentLines, "\n"))
 	} else {
 		// Use simplified message key without Markdown
 		messageText = fmt.Sprintf("Role Selection Progress:\n%s\nWaiting for players\\.\\.\\.", strings.Join(assignmentLines, "\n"))

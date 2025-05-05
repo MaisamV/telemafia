@@ -1,22 +1,15 @@
 package telegram
 
 import (
-	"context"
 	"log"
 	"strings" // Import messages
-	gameEntity "telemafia/internal/domain/game/entity"
-	gameQuery "telemafia/internal/domain/game/usecase/query"
-	game "telemafia/internal/presentation/telegram/handler/game"
-	"telemafia/internal/shared/entity"
 	"telemafia/internal/shared/tgutil"
 	"time"
-
-	roomHandler "telemafia/internal/presentation/telegram/handler/room"
 
 	"gopkg.in/telebot.v3"
 )
 
-func (h *BotHandler) updateMessages(book *tgutil.RefreshingMessageBook, getMessage func(user int64, data string) (string, []interface{}, error)) {
+func (h *BotHandler) RefreshMessages(book *tgutil.RefreshingMessageBook) {
 	messagesToUpdate := book.GetAllActiveMessages()
 	if len(messagesToUpdate) == 0 {
 		return
@@ -26,7 +19,7 @@ func (h *BotHandler) updateMessages(book *tgutil.RefreshingMessageBook, getMessa
 	for chatID, payload := range messagesToUpdate {
 		// Prepare the updated message content using the refactored function
 		// Pass the necessary handlers from the BotHandler (h)
-		newContent, newMarkup, err := getMessage(chatID, payload.Data)
+		newContent, newMarkup, err := book.GetMessage(chatID, payload.Data)
 		if err != nil {
 			log.Printf(h.msgs.Refresh.ErrorPrepare, chatID, err) // Use msg
 			continue
@@ -34,12 +27,9 @@ func (h *BotHandler) updateMessages(book *tgutil.RefreshingMessageBook, getMessa
 
 		_, editErr := h.bot.Edit(&telebot.Message{ID: payload.MessageID, Chat: &telebot.Chat{ID: payload.ChatID}}, newContent, newMarkup...)
 		if editErr != nil {
-			if strings.Contains(editErr.Error(), "message to edit not found") ||
-				strings.Contains(editErr.Error(), "bot was blocked by the user") {
-				log.Printf(h.msgs.Refresh.ErrorEditRemoving, chatID, editErr) // Use msg
+			log.Printf(h.msgs.Refresh.ErrorEditRemoving, chatID, editErr)
+			if !strings.Contains(editErr.Error(), "message is not modified") {
 				book.RemoveActiveMessage(chatID)
-			} else {
-				log.Printf(h.msgs.Refresh.ErrorEdit, chatID, editErr) // Use msg
 			}
 		}
 	}
@@ -58,19 +48,7 @@ func (h *BotHandler) StartRefreshTimer() {
 		for gameID, book := range h.adminAssignmentTrackers {
 			if book.ConsumeRefreshNeeded() {
 				log.Printf("Refresh needed for Admin Tracker Game ID: %s", gameID)
-				h.updateMessages(book, func(user int64, data string) (string, []interface{}, error) {
-					gameIDFromData := gameEntity.GameID(data)
-					// Fetch necessary data (Game, State, Players) - May need error handling
-					gameData, _ := h.GetGameByIDHandler().Handle(context.Background(), gameQuery.GetGameByIDQuery{ID: gameIDFromData})
-					state, stateExists := h.GetInteractiveSelectionState(gameIDFromData)
-
-					if gameData == nil || !stateExists {
-						log.Printf("Refresh Admin: Game %s or State not found.", gameIDFromData)
-						return "Error: Game data unavailable.", []interface{}{}, nil // Return error state message
-					}
-					// Prepare message content using the helper from callbacks_game
-					return game.PrepareAdminAssignmentMessage(gameData, state, h.msgs)
-				})
+				h.RefreshMessages(book)
 			}
 		}
 		h.adminRefreshMutex.RUnlock()
@@ -80,60 +58,19 @@ func (h *BotHandler) StartRefreshTimer() {
 		for gameID, book := range h.playerRoleChoiceRefreshers {
 			if book.ConsumeRefreshNeeded() {
 				log.Printf("Refresh needed for Player Choice Game ID: %s", gameID)
-				h.updateMessages(book, func(user int64, data string) (string, []interface{}, error) {
-					gameIDFromData := gameEntity.GameID(data)
-					// Fetch necessary data (State)
-					state, stateExists := h.GetInteractiveSelectionState(gameIDFromData)
-					if !stateExists {
-						log.Printf("Refresh Player: State for game %s not found.", gameIDFromData)
-						return "Role selection is no longer active.", []interface{}{}, nil // Return inactive state message
-					}
-
-					// Prepare markup using the helper from callbacks_game
-					markup, err := game.PreparePlayerRoleSelectionMarkup(gameIDFromData, len(state.ShuffledRoles), state.TakenIndices, h.msgs)
-					message := h.msgs.Game.RoleSelectionPromptPlayer // Keep the prompt same, just update buttons
-					opts := []interface{}{
-						markup,
-					}
-					return message, opts, err
-				})
+				h.RefreshMessages(book)
 			}
 		}
 		h.playerRefreshMutex.RUnlock()
 
 		// --- Room List Refresh ---
 		if h.roomListRefreshMessage.ConsumeRefreshNeeded() {
-			h.updateMessages(h.roomListRefreshMessage, func(user int64, data string) (string, []interface{}, error) {
-				message, markup, err := roomHandler.PrepareRoomListMessage(
-					h.getRoomsHandler,
-					h.getPlayersInRoomHandler,
-					h.msgs,
-				)
-				opts := []interface{}{
-					markup,
-					telebot.NoPreview,
-				}
-				return message, opts, err
-			})
+			h.RefreshMessages(h.roomListRefreshMessage)
 		}
 
 		// --- Room Detail Refresh ---
 		if h.roomDetailRefreshMessage.ConsumeRefreshNeeded() {
-			h.updateMessages(h.roomDetailRefreshMessage, func(user int64, data string) (string, []interface{}, error) {
-				message, markup, err := roomHandler.RoomDetailMessage(
-					h.getRoomsHandler,
-					h.getPlayersInRoomHandler,
-					h.msgs,
-					entity.UserID(user),
-					data,
-				)
-				opts := []interface{}{
-					markup,
-					telebot.ModeMarkdownV2,
-					telebot.NoPreview,
-				}
-				return message, opts, err
-			})
+			h.RefreshMessages(h.roomDetailRefreshMessage)
 		}
 	}
 }
