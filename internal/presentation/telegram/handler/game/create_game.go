@@ -6,6 +6,7 @@ import (
 	"log"
 
 	// Import room entity
+	roomEntity "telemafia/internal/domain/room/entity"
 	roomQuery "telemafia/internal/domain/room/usecase/query"
 	messages "telemafia/internal/presentation/telegram/messages"
 	"telemafia/internal/shared/tgutil"
@@ -14,6 +15,7 @@ import (
 )
 
 // HandleCreateGame initiates the interactive game creation process.
+// Global admins see all rooms. Room moderators see only the rooms they moderate.
 func HandleCreateGame(
 	getRoomsHandler *roomQuery.GetRoomsHandler,
 	// other handlers needed for callbacks will be passed to HandleCallback
@@ -26,36 +28,38 @@ func HandleCreateGame(
 		return c.Send(msgs.Common.ErrorIdentifyRequester)
 	}
 
-	if !requester.Admin {
-		return c.Send(msgs.Common.ErrorPermissionDenied) // Direct access
-	}
-
 	// Fetch available rooms
-	rooms, err := getRoomsHandler.Handle(context.Background(), roomQuery.GetRoomsQuery{}) // Pass value type
+	allRooms, err := getRoomsHandler.Handle(context.Background(), roomQuery.GetRoomsQuery{}) // Pass value type
 	if err != nil {
 		errMsg := fmt.Sprintf(msgs.Game.CreateGameErrorFetchRooms, err) // Use correct field
 		log.Printf("Error fetching rooms for /create_game: %v", err)
 		return c.Send(errMsg)
 	}
 
-	if len(rooms) == 0 {
-		return c.Send(msgs.Room.ListNoRooms) // Correct path
+	// Filter rooms based on permission (Global Admin or Room Moderator)
+	isGlobalAdmin := requester.Admin
+	var roomsToShow []*roomEntity.Room
+	for _, room := range allRooms {
+		isRoomModerator := room.Moderator != nil && room.Moderator.ID == requester.ID
+		if isGlobalAdmin || isRoomModerator {
+			roomsToShow = append(roomsToShow, room)
+		}
 	}
 
-	// Create inline keyboard with room buttons
+	if len(roomsToShow) == 0 {
+		// User is neither admin nor moderator of any room
+		return c.Send(msgs.Common.ErrorPermissionDenied) // Or a more specific message
+	}
+
+	// Create inline keyboard with allowed room buttons
 	markup := &telebot.ReplyMarkup{}
 	var rows []telebot.Row
-	for _, room := range rooms {
+	for _, room := range roomsToShow {
 		// Get player count safely
 		playerCount := 0
 		if room.Players != nil {
 			playerCount = len(room.Players)
 		}
-		/*btn := &telebot.InlineButton{
-			Unique: tgutil.UniqueCreateGameSelectRoom,
-			Text:   fmt.Sprintf("%s (%d players)", room.Name, playerCount),
-			Data:   string(room.ID),
-		}*/
 		btn := markup.Data(
 			fmt.Sprintf("%s (%d players)", room.Name, playerCount), // Show player count
 			tgutil.UniqueCreateGameSelectRoom,

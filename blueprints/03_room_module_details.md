@@ -52,13 +52,13 @@ Defines the interfaces required by the Room domain to interact with persistence.
     *   `JoinRoomHandler`: Depends on `RoomRepository` and `event.Publisher`. Calls `RoomRepository.GetRoomByID` (to verify existence), `RoomRepository.AddPlayerToRoom`, and publishes `PlayerJoinedEvent`.
 *   **`kick_user.go`:**
     *   `KickUserCommand`: Contains `Requester`, `RoomID`, `PlayerID`.
-    *   `KickUserHandler`: Depends on `RoomRepository` and `event.Publisher`. Handles admin check, calls `RoomRepository.RemovePlayerFromRoom`, and publishes `PlayerKickedEvent`.
+    *   `KickUserHandler`: Depends on `RoomRepository` and `event.Publisher`. Handles permission check (global admin OR room moderator), calls `RoomRepository.RemovePlayerFromRoom`, and publishes `PlayerKickedEvent`.
 *   **`leave_room.go`:**
     *   `LeaveRoomCommand`: Contains `Requester`, `RoomID`.
     *   `LeaveRoomHandler`: Depends on `RoomRepository` and `event.Publisher`. Calls `RoomRepository.RemovePlayerFromRoom` and publishes `PlayerLeftEvent`.
 *   **`change_moderator.go`:**
-    *   `ChangeModeratorCommand`: Contains `Requester` (*User, admin), `RoomID`, `NewModerator` (*User).
-    *   `ChangeModeratorHandler`: Depends on `RoomRepository`. Handles admin check, fetches room, validates new moderator is not current moderator, calls `room.SetModerator()`, and calls `RoomRepository.UpdateRoom()`.
+    *   `ChangeModeratorCommand`: Contains `Requester` (*User), `RoomID`, `NewModerator` (*User).
+    *   `ChangeModeratorHandler`: Depends on `RoomRepository`. Handles permission check (global admin OR current room moderator), fetches room, validates new moderator is not current moderator, calls `room.SetModerator()`, and calls `RoomRepository.UpdateRoom()`.
 
 ## 4. `usecase/query/` (Queries - Data Retrieval)
 

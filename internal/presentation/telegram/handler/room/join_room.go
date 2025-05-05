@@ -55,7 +55,7 @@ func HandleJoinRoom(
 	})
 	roomList.RaiseRefreshNeeded()
 	roomDetail.RaiseRefreshNeeded()
-	message, markup, err := RoomDetailMessage(getRoomsHandler, getPlayersInRoomHandler, msgs, user.Admin, data)
+	message, markup, err := RoomDetailMessage(getRoomsHandler, getPlayersInRoomHandler, msgs, user.ID, data)
 	if err != nil {
 		return err
 	}

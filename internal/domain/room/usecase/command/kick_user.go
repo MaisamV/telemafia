@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 	"errors"
+	"fmt" // Import fmt for error formatting
 	roomEntity "telemafia/internal/domain/room/entity"
 	roomPort "telemafia/internal/domain/room/port"
 	sharedEntity "telemafia/internal/shared/entity"
@@ -33,20 +34,23 @@ func NewKickUserHandler(repo roomPort.RoomRepository, publisher sharedEvent.Publ
 
 // Handle processes the kick user command
 func (h *KickUserHandler) Handle(ctx context.Context, cmd KickUserCommand) error {
-	// --- Permission Check ---
-	if !cmd.Requester.Admin { // Assuming Admin field exists on sharedEntity.User
-		return errors.New("kick user: admin privilege required") // More specific error
+	// Fetch the room first to check moderator status
+	room, err := h.roomRepo.GetRoomByID(cmd.RoomID)
+	if err != nil {
+		// Handle specific error like RoomNotFound if needed, otherwise return generic error
+		return fmt.Errorf("kick user: could not find room %s: %w", cmd.RoomID, err)
 	}
 
-	// Check if the room exists (optional, RemovePlayerFromRoom likely handles not found)
-	_, err := h.roomRepo.GetRoomByID(cmd.RoomID)
-	if err != nil {
-		return err
+	// --- Permission Check ---
+	// Allow if requester is global admin OR the moderator of this specific room
+	isRoomModerator := room.Moderator != nil && room.Moderator.ID == cmd.Requester.ID
+	if !cmd.Requester.Admin && !isRoomModerator {
+		return errors.New("kick user: permission denied (requires admin or room moderator)")
 	}
 
 	// Remove player from room
 	if err := h.roomRepo.RemovePlayerFromRoom(cmd.RoomID, cmd.PlayerID); err != nil {
-		return err // Propagates ErrPlayerNotInRoom etc.
+		return fmt.Errorf("kick user: failed to remove player: %w", err) // Propagates ErrPlayerNotInRoom etc.
 	}
 
 	// Publish domain event

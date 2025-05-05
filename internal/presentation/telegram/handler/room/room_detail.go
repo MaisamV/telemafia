@@ -6,16 +6,20 @@ import (
 	roomEntity "telemafia/internal/domain/room/entity"
 	roomQuery "telemafia/internal/domain/room/usecase/query"
 	"telemafia/internal/presentation/telegram/messages"
+	sharedEntity "telemafia/internal/shared/entity"
 	"telemafia/internal/shared/tgutil"
 
 	"gopkg.in/telebot.v3"
 )
 
+// RoomDetailMessage generates the content and markup for the room detail view.
+// It shows admin buttons if the viewer (identified by chatID) is a global admin
+// or the moderator of this specific room.
 func RoomDetailMessage(
-	getRoomsHandler *roomQuery.GetRoomsHandler,
+	getRoomsHandler *roomQuery.GetRoomsHandler, // Consider changing to GetRoomByID handler
 	getPlayersHandler *roomQuery.GetPlayersInRoomHandler,
 	msgs *messages.Messages,
-	isAdmin bool,
+	requesterID sharedEntity.UserID, // ID of the user viewing the message
 	roomID string,
 ) (string, *telebot.ReplyMarkup, error) {
 	// Fetch players in the room
@@ -24,7 +28,8 @@ func RoomDetailMessage(
 		return "", nil, fmt.Errorf("error fetching players for room detail: %w", err)
 	}
 
-	// Fetch room details (using GetRoomByID would be more efficient if available, but using GetRooms for now)
+	// Fetch room details
+	// TODO: Optimize by using a GetRoomByID handler if available/created
 	rooms, err := getRoomsHandler.Handle(context.Background(), roomQuery.GetRoomsQuery{})
 	if err != nil {
 		return "", nil, fmt.Errorf("error fetching rooms for room detail: %w", err)
@@ -44,24 +49,23 @@ func RoomDetailMessage(
 
 	// Construct player list string
 	playerNames := ""
-
 	for i, player := range players {
 		playerNames += fmt.Sprintf("%d \\- %s\n", i+1, player.GetProfileLink())
 	}
 
+	// Determine if the viewer has admin privileges for this room
+	isRoomAdmin := tgutil.IsAdmin(int64(requesterID)) || (room.Moderator != nil && room.Moderator.ID == requesterID)
+
 	// Format message text
 	var messageText string
-	//if room.ScenarioName != "" {
-	//	messageText = fmt.Sprintf(msgs.Room.RoomDetailWithScenario,
-	//		room.Name,
-	//		room.ScenarioName,
-	//		playerNames)
-	//} else {
-	messageText = fmt.Sprintf(msgs.Room.RoomDetail,
+	moderatorLink := "None"
+	if room.Moderator != nil {
+		moderatorLink = room.Moderator.GetProfileLink()
+	}
+	messageText = fmt.Sprintf(msgs.Room.RoomDetail, // Assuming RoomDetail takes Name, Moderator, Players
 		room.Name,
-		room.Moderator.GetProfileLink(),
+		moderatorLink,
 		playerNames)
-	//}
 
 	// Create buttons
 	markup := &telebot.ReplyMarkup{}
@@ -73,9 +77,9 @@ func RoomDetailMessage(
 	// Arrange the first row
 	firstRow := markup.Row(leaveButton, inviteButton)
 
-	// Prepare admin rows
+	// Prepare admin rows (if viewer is room admin)
 	adminRows := []telebot.Row{}
-	if isAdmin {
+	if isRoomAdmin {
 		// Admin Action Row (Kick, Change Moderator)
 		kickButton := markup.Data(msgs.Room.KickUserButton, tgutil.UniqueKickUserSelect, roomID)
 		modButton := markup.Data(msgs.Room.ChangeModeratorButton, tgutil.UniqueChangeModeratorSelect, roomID)
@@ -93,6 +97,5 @@ func RoomDetailMessage(
 	allRows = append(allRows, adminRows...)
 	markup.Inline(allRows...)
 
-	// No need to manually set markup.InlineKeyboard, markup.Inline handles it
 	return messageText, markup, nil
 }

@@ -3,6 +3,7 @@ package telegram
 import (
 	"log"
 	"strings" // Import messages
+	"telemafia/internal/shared/entity"
 	"telemafia/internal/shared/tgutil"
 	"time"
 
@@ -67,7 +68,7 @@ func (h *BotHandler) StartRefreshTimer() {
 					h.getRoomsHandler,
 					h.getPlayersInRoomHandler,
 					h.msgs, // Pass messages
-					tgutil.IsAdmin(user),
+					entity.UserID(user),
 					data,
 				)
 				opts := []interface{}{
