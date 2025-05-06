@@ -188,11 +188,11 @@ func HandleJoinRoomCallback(
 	roomList.RaiseRefreshNeeded()
 	roomDetail.RaiseRefreshNeeded()
 	_ = c.Respond(&telebot.CallbackResponse{Text: msgs.Room.JoinSuccess})
-	message, markup, err := RoomDetailMessage(getRoomsHandler, getPlayersInRoomHandler, msgs, user.ID, data)
+	message, opts, err := RoomDetailMessage(getRoomsHandler, getPlayersInRoomHandler, msgs, user.ID, data)
 	if err != nil {
 		return err
 	}
-	return c.Edit(message, markup, telebot.ModeMarkdownV2, telebot.NoPreview)
+	return c.Edit(message, opts...)
 }
 
 // HandleKickUserSelectCallback shows the list of users to kick from a room.
@@ -299,14 +299,14 @@ func HandleKickUserConfirmCallback(
 
 	// Prepare and edit the message back to the standard room detail
 	// Note: We pass requester.Admin which should be true here
-	message, markup, err := RoomDetailMessage(getRoomsHandler, getPlayersHandler, msgs, requester.ID, roomIDStr)
+	message, opts, err := RoomDetailMessage(getRoomsHandler, getPlayersHandler, msgs, requester.ID, roomIDStr)
 	if err != nil {
 		log.Printf("KickUserConfirm: Error preparing room detail after kick for room '%s': %v", roomID, err)
 		// Can't easily recover the message here, just log
 		return nil
 	}
 
-	return c.Edit(message, markup, telebot.ModeMarkdownV2, telebot.NoPreview)
+	return c.Edit(message, opts...)
 }
 
 // HandleChangeModeratorSelectCallback shows the list of users who can become the new moderator.
@@ -429,11 +429,11 @@ func HandleChangeModeratorConfirmCallback(
 	_ = c.Respond(&telebot.CallbackResponse{Text: ackMsg})
 
 	// Prepare and edit the message back to the standard room detail
-	message, markup, err := RoomDetailMessage(getRoomsHandler, getPlayersHandler, msgs, requester.ID, roomIDStr)
+	message, opts, err := RoomDetailMessage(getRoomsHandler, getPlayersHandler, msgs, requester.ID, roomIDStr)
 	if err != nil {
 		log.Printf("ChangeModConfirm: Error preparing room detail after change for room '%s': %v", roomID, err)
 		return nil // Can't easily recover message
 	}
 
-	return c.Edit(message, markup, telebot.ModeMarkdownV2, telebot.NoPreview)
+	return c.Edit(message, opts...)
 }

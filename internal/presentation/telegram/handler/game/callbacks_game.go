@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	telegram "telemafia/internal/presentation/telegram/handler/room"
 	"telemafia/internal/shared/tgutil"
 
 	gameEntity "telemafia/internal/domain/game/entity"
@@ -198,6 +199,7 @@ func HandleStartCreatedGame(
 // BotHandlerInterface defines methods needed from BotHandler by callbacks
 type BotHandlerInterface interface {
 	GetGameByIDHandler() *gameQuery.GetGameByIDHandler
+	GetRoomsHandler() *roomQuery.GetRoomsHandler
 	GetPlayersInRoomHandler() *roomQuery.GetPlayersInRoomHandler
 	GetScenarioByIDHandler() *scenarioQuery.GetScenarioByIDHandler
 	AssignRolesHandler() *gameCommand.AssignRolesHandler
@@ -302,18 +304,21 @@ func HandleChooseCardStart(
 	}
 
 	// 6. Prepare & Edit Admin's Tracking Message (Placeholder Text for now)
+	detailMessage, opts, err := telegram.RoomDetailMessage(h.GetRoomsHandler(), h.GetPlayersInRoomHandler(), msgs, requester.ID, string(game.Room.ID))
+	_, err = h.Bot().Edit(c.Message(), detailMessage, opts...)
+	if err != nil {
+		log.Printf("ChooseCardStart: Failed to SEND new admin message for %s: %v", gameID, err)
+		// If sending also fails, we can't store it. Return error.
+		_ = c.Respond(&telebot.CallbackResponse{Text: "Failed to load room detail.", ShowAlert: true})
+	}
 	message, opts, err := PrepareAdminAssignmentMessage(game, newState, msgs)
 	// Edit or Send the admin message
 	// var adminMsg telebot.Editable // No longer needed
-	sentAdminMsg, err := h.Bot().Edit(c.Message(), message, opts...) // Try editing first
-	if err != nil {                                                  // If edit fails...
-		log.Printf("ChooseCardStart: Failed to EDIT admin message (%v), trying to SEND new one for %s", err, gameID)
-		sentAdminMsg, err = h.Bot().Send(c.Sender(), message, opts...) // ...try sending new
-		if err != nil {
-			log.Printf("ChooseCardStart: Failed to SEND new admin message for %s: %v", gameID, err)
-			// If sending also fails, we can't store it. Return error.
-			return c.Respond(&telebot.CallbackResponse{Text: "Failed to initiate game setup message.", ShowAlert: true})
-		}
+	sentAdminMsg, err := h.Bot().Send(c.Sender(), message, opts...)
+	if err != nil {
+		log.Printf("ChooseCardStart: Failed to SEND new admin message for %s: %v", gameID, err)
+		// If sending also fails, we can't store it. Return error.
+		return c.Respond(&telebot.CallbackResponse{Text: "Failed to initiate game setup message.", ShowAlert: true})
 	}
 
 	// If edit or send was successful, store the message in the refresh book
@@ -593,7 +598,7 @@ func PrepareAdminAssignmentMessage(game *gameEntity.Game, state *tgutil.Interact
 
 	if allSelected {
 		// Use simplified message key without Markdown
-		messageText = fmt.Sprintf("All roles selected\\!\n||%s||", strings.Join(assignmentLines, "\n"))
+		messageText = fmt.Sprintf("All roles selected\\!\n%s", strings.Join(assignmentLines, "\n"))
 	} else {
 		// Use simplified message key without Markdown
 		messageText = fmt.Sprintf("Role Selection Progress:\n%s\nWaiting for players\\.\\.\\.", strings.Join(assignmentLines, "\n"))

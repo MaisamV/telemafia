@@ -94,6 +94,10 @@ func (h *BotHandler) GetPlayersInRoomHandler() *roomQuery.GetPlayersInRoomHandle
 	return h.getPlayersInRoomHandler
 }
 
+func (h *BotHandler) GetRoomsHandler() *roomQuery.GetRoomsHandler {
+	return h.getRoomsHandler
+}
+
 func (h *BotHandler) GetScenarioByIDHandler() *scenarioQuery.GetScenarioByIDHandler {
 	return h.getScenarioByIDHandler
 }
@@ -164,19 +168,13 @@ func NewBotHandler(
 			return message, opts, err
 		}),
 		roomDetailRefreshMessage: tgutil.NewRefreshState(func(user int64, data string) (string, []interface{}, error) {
-			message, markup, err := room.RoomDetailMessage(
+			return room.RoomDetailMessage(
 				getRoomsHandler,
 				getPlayersInRoomHandler,
 				msgs,
 				entity.UserID(user),
 				data,
 			)
-			opts := []interface{}{
-				markup,
-				telebot.ModeMarkdownV2,
-				telebot.NoPreview,
-			}
-			return message, opts, err
 		}),
 		interactiveSelections:      make(map[gameEntity.GameID]*tgutil.InteractiveSelectionState), // Use tgutil type
 		playerRoleChoiceRefreshers: make(map[gameEntity.GameID]*tgutil.RefreshingMessageBook),

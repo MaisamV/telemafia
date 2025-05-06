@@ -64,17 +64,18 @@
     8.  Send responses/edit messages using `c.Send()`, `c.Edit()`, `c.Respond()`.
     9.  If state relevant to a dynamic message was changed:
         *   Obtain the relevant `RefreshingMessageBook` using the appropriate `h.Get...` or `h.GetOrCreate...` method.
-        *   Call `book.RaiseRefreshNeeded()`.
+        *   Call `book.RaiseRefreshNeeded()`. **Note:** May need to trigger refresh on multiple books if the user's view changes (e.g., moving from list to detail).
     10. If a *new* dynamic message is sent (one that needs refreshing):
         *   Obtain the relevant `RefreshingMessageBook` using `h.GetOrCreate...`.
         *   Create the `tgutil.RefreshingMessage` struct.
-        *   Add it to the book using `book.AddActiveMessage(chatID, refreshMsg)`.
+        *   Add it to the book using `book.AddActiveMessage(chatID, refreshMsg)`. **Note:** Ensure the message reference is removed from any *previous* book the user was viewing (e.g., remove from `roomList` when adding to `roomDetail`). Handlers might also need to explicitly delete the previous Telegram message.
     11. If a dynamic message becomes invalid or finalized:
         *   Obtain the relevant `RefreshingMessageBook` using `h.Get...`.
         *   Remove it using `book.RemoveActiveMessage(chatID)` or trigger book deletion via `h.Delete...`.
 *   **Specific Handlers:**
     *   `room.HandleCreateRoom`: Handles the `/create_room` command. Requires admin privileges. Parses name, converts sender to `User`, calls `CreateRoomHandler` use case (passing the User), triggers refresh, and sends success message.
-    *   `room.HandleJoinRoomCallback`: Handles the join button press. Calls `JoinRoom` use case, updates refresh state, calls `room.RoomDetailMessage`, and edits the message using `ModeMarkdownV2`.
+    *   `room.HandleJoinRoomCallback`: Handles the join button press. Calls `JoinRoom` use case. **Updates refresh state by removing the user's message from the `roomList` book and adding it to the `roomDetail` book.** Triggers refresh for both books. Calls `room.RoomDetailMessage`, and edits the message using `ModeMarkdownV2`.
+    *   `room.HandleLeaveRoomSelectCallback`: Handles the leave button press. Calls `LeaveRoom` use case. **Updates refresh state by removing the user's message from the `roomDetail` book and adding it back to the `roomList` book.** Triggers refresh for both books. Edits message back to the room list view.
     *   `room.HandleKickUserSelectCallback`: Callback handler for the admin "Kick User" button. Fetches players in the room, displays a message (`msgs.Room.KickUserSelectPrompt`) with each player as a button (including the admin). Button payload includes roomID and userIDToKick, unique is `UniqueKickUserConfirm`. Includes a cancel button.
     *   `room.HandleKickUserConfirmCallback`: Callback handler when an admin selects a user to kick. Parses payload, calls `KickUser` use case, triggers refreshes for room list and detail, responds with success (`msgs.Room.KickUserCallbackSuccess`), and edits the message back to the standard room detail view.
     *   `room.HandleChangeModeratorSelectCallback`: Callback handler for the admin "Change Moderator" button. Fetches players, displays message (`msgs.Room.ChangeModeratorSelectPrompt`) with each player as a button (including the current moderator). Button payload includes roomID and userIDToMakeMod, unique is `UniqueChangeModeratorConfirm`. Includes a cancel button.

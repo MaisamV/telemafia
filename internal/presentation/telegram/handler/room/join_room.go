@@ -55,11 +55,11 @@ func HandleJoinRoom(
 	})
 	roomList.RaiseRefreshNeeded()
 	roomDetail.RaiseRefreshNeeded()
-	message, markup, err := RoomDetailMessage(getRoomsHandler, getPlayersInRoomHandler, msgs, user.ID, data)
+	message, opts, err := RoomDetailMessage(getRoomsHandler, getPlayersInRoomHandler, msgs, user.ID, data)
 	if err != nil {
 		return err
 	}
-	msg, err := c.Bot().Send(c.Sender(), message, markup, telebot.ModeMarkdownV2, telebot.NoPreview)
+	msg, err := c.Bot().Send(c.Sender(), message, opts...)
 	roomDetail.AddActiveMessage(chatID, &tgutil.RefreshingMessage{
 		MessageID: msg.ID,
 		ChatID:    msg.Chat.ID,

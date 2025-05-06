@@ -21,7 +21,7 @@ func RoomDetailMessage(
 	msgs *messages.Messages,
 	requesterID sharedEntity.UserID, // ID of the user viewing the message
 	roomID string,
-) (string, *telebot.ReplyMarkup, error) {
+) (string, []interface{}, error) {
 	// Fetch players in the room
 	players, err := getPlayersHandler.Handle(context.Background(), roomQuery.GetPlayersInRoomQuery{RoomID: roomEntity.RoomID(roomID)})
 	if err != nil {
@@ -97,5 +97,10 @@ func RoomDetailMessage(
 	allRows = append(allRows, adminRows...)
 	markup.Inline(allRows...)
 
-	return messageText, markup, nil
+	opts := []interface{}{
+		markup,
+		telebot.ModeMarkdownV2,
+		telebot.NoPreview,
+	}
+	return messageText, opts, nil
 }
