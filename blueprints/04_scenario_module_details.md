@@ -12,10 +12,13 @@
     *   Intended to be populated from JSON data (e.g., via `add_scenario_json.go` use case).
 *   **`Side` struct:**
     *   Represents a group of roles (e.g., Mafia, Civilians).
-    *   Fields: `Name` (string), `DefaultRole` (string, optional), `Roles` ([]string - names of roles).
+    *   Fields: `Name` (string), `DefaultRole` (Role, optional), `Roles` ([]Role - list of actual Role structs).
 *   **`Role` struct:**
-    *   Represents a single role *after* extraction for assignment (used by Game module).
-    *   Fields: `Name` (string), `Side` (string).
+    *   Represents a single role with its `Name`, optional `ImageID`, and `Side` (populated during flattening).
+    *   Used *after* extracting roles from the `Scenario` structure for assignment (by Game module) or display.
+*   **`Scenario.FlatRoles() []Role` (Method):**
+    *   NEW: Returns a flattened list of all `Role` structs from all `Sides` within the scenario.
+    *   During flattening, the `Side` field of each `Role` struct is populated with the name of the `Side` it belongs to.
 
 ## 2. `port/scenario_repository.go`
 
@@ -33,7 +36,7 @@ Defines the interfaces required by the Scenario domain to interact with persiste
 
 *   **`add_scenario_json.go`:**
     *   `AddScenarioJSONCommand`: Contains `Requester`, `JSONData` (string).
-    *   `AddScenarioJSONHandler`: Depends on `ScenarioWriter`. Handles admin check, unmarshals JSON into `Scenario` entity, performs validation (names, non-empty roles/sides), generates internal ID, calls `ScenarioWriter.CreateScenario`.
+    *   `AddScenarioJSONHandler`: Depends on `ScenarioWriter`. Handles admin check, unmarshals JSON into `Scenario` entity, performs validation (names, non-empty roles/sides, non-empty role names, at least one role overall), generates internal ID, calls `ScenarioWriter.CreateScenario`.
 *   **`create_scenario.go`:** (Note: This seems superseded by `add_scenario_json` for complex scenarios, but might be used for basic name/ID creation initially).
     *   `CreateScenarioCommand`: Contains `Requester`, `ID`, `Name`.
     *   `CreateScenarioHandler`: Depends on `ScenarioWriter`. Handles admin check, creates a basic `Scenario` struct, calls `ScenarioWriter.CreateScenario`.

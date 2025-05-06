@@ -12,6 +12,8 @@
 *   **`RegisterHandlers()`:** Maps Telegram commands (e.g., `/create_room`, `/create_game`) and events (e.g., `telebot.OnCallback`, `telebot.OnDocument`) to specific *dispatcher methods* on the `BotHandler` struct (e.g., `h.handleCreateRoom`, `h.handleCreateGame`).
 *   **Dispatcher Methods (e.g., `handleCreateRoom`, `handleCallback`, `handleDocument`, `handleCreateGame`):** These methods primarily act as routers. They parse necessary information from the `telebot.Context` (like payload, sender) and call the corresponding **exported handler functions** located in sub-packages (e.g., `room.HandleCreateRoom`, `game.HandleCreateGame`) or other handler files (`callbacks.go`, `document_handler.go`), passing the required dependencies (use case handlers, messages) from the `BotHandler` instance (`h`). Note that `RefreshingMessageBook` instances are generally *not* passed directly to these handlers anymore.
 *   **Helper Methods (`Get/GetOrCreate/Delete...`):** (UPDATED) Provides methods for managing the maps holding `RefreshingMessageBook` instances (e.g., `GetOrCreateAdminAssignmentTracker`). The `GetOrCreate...` methods now instantiate the book using `tgutil.NewRefreshState`, passing the appropriate **message generation function** specific to that book's purpose.
+    *   **NEW:** Includes helpers for managing `interactiveSelections map[gameEntity.GameID]*tgutil.InteractiveSelectionState` (used for the Choose Card flow).
+    *   **NEW:** Includes helpers for managing `playerRoleChoiceRefreshers map[gameEntity.GameID]*tgutil.RefreshingMessageBook` (used for the Choose Card player messages).
 *   **`Start()`:** Initializes background tasks (like the refresh timer) and starts the `telebot` polling loop.
 
 ## 2. `handler/callbacks.go` (`BotHandler.handleCallback`)
@@ -28,15 +30,16 @@
     *   Uses a `switch` statement on `Unique` to route the callback to the appropriate specialized handler function within the relevant sub-package (`room` or `game`).
     *   Handles `UniqueCancel` directly by deleting the message.
     *   **New Callbacks Routed:**
-        *   `tgutil.UniqueChooseCardStart`: Routes to `game.HandleChooseCardStart`.
-        *   `tgutil.UniquePlayerSelectsCard`: Routes to `game.HandlePlayerSelectsCard`.
+        *   `tgutil.UniqueStartGame`: Routes to `game.HandleStartCreatedGame` (direct role assignment).
+        *   `tgutil.UniqueChooseCardStart`: Routes to `game.HandleChooseCardStart` (initiates interactive selection).
+        *   `tgutil.UniquePlayerSelectsCard`: Routes to `game.HandlePlayerSelectsCard` (handles a player's interactive choice).
         *   `tgutil.UniqueCancelGame`: Now routes to `game.HandleCancelCreateGame`, passing the `BotHandlerInterface` for cleanup.
 
 ## 3. `handler/refresh.go`
 
 *   **Purpose:** Handles the background task for updating dynamic messages.
 *   **`BotHandler.StartRefreshTimer()`:** (UPDATED) Runs a goroutine with a `time.Ticker`.
-    *   Periodically iterates through all managed `RefreshingMessageBook` instances (global ones like `roomListRefreshMessage`, and those in maps like `adminAssignmentTrackers`).
+    *   Periodically iterates through all managed `RefreshingMessageBook` instances (global ones like `roomListRefreshMessage`, and those in maps like `adminAssignmentTrackers` **and `playerRoleChoiceRefreshers`**).
     *   Checks `book.ConsumeRefreshNeeded()`.
     *   If true, calls `h.RefreshMessages(book)`.
 *   **`BotHandler.RefreshMessages(book)`:** (NEW/REFACTORED from `updateMessages`)
@@ -45,6 +48,9 @@
     3.  Uses `h.bot.Edit()` to update the message in Telegram with the content returned by `book.GetMessage`.
     4.  Handles errors (e.g., message not found, user blocked bot) and removes the message from tracking using `book.RemoveActiveMessage(chatID)` if necessary.
 *   **Message Preparation Functions (e.g., `room.PrepareRoomListMessage`, `game.PrepareAdminAssignmentMessage`):** Exported functions responsible for fetching current data and formatting message text/options. These are now passed into `tgutil.NewRefreshState` when a book is created (either globally in `NewBotHandler` or dynamically in `GetOrCreate...` methods).
+    *   **NEW:** `game.PrepareAdminAssignmentMessage`: Fetches game state and player selections from `InteractiveSelectionState` to format the admin's view during the Choose Card flow.
+    *   **NEW:** `game.PreparePlayerRoleSelectionMarkup`: Generates the inline keyboard for players during the Choose Card flow, marking taken roles.
+    *   **NEW:** `game.PrepareAssignRoleMessage`: Formats the private message sent to a user upon role assignment. If the `Role` has an `ImageID`, it sends a photo with the role information as a caption; otherwise, it sends a text message.
 
 ## 4. `handler/<module>/` (e.g., `handler/room/`, `handler/game/`)
 
@@ -82,12 +88,12 @@
     *   `room.HandleChangeModeratorConfirmCallback`: Callback handler when an admin selects a new moderator. Parses payload, fetches target user details, calls `ChangeModerator` use case (which updates the moderator and manages player lists), triggers refreshes, responds with success (`msgs.Room.ChangeModeratorCallbackSuccess`), and edits message back to room detail view.
     *   `game.HandleCreateGame`: Initiates the interactive game creation flow. Fetches rooms and filters them based on permissions (global admins see all, room moderators see only their rooms). Sends a message prompting for room selection.
     *   `game.HandleSelectRoomForCreateGame`: Callback handler for room selection. Sends a message prompting for scenario selection.
-    *   `game.HandleSelectScenarioForCreateGame`: Callback handler for scenario selection. Fetches data, presents confirmation message (`msgs.Game.CreateGameConfirmPrompt` with role list), with "Start" and "Cancel" buttons. Uses `ModeMarkdownV2`.
-    *   `game.HandleStartGameCallback`: Callback handler for the "Start" button. Calls `AssignRoles`, sends role info via PM (using `msgs.Game.AssignRolesSuccessPrivate` with role name and side, using `ModeMarkdownV2`), then edits the original message (`msgs.Game.CreateGameStartedSuccess` with user profile links and roles). Uses `ModeMarkdownV2`.
+    *   `game.HandleSelectScenarioForCreateGame`: Callback handler for scenario selection. Fetches data, presents confirmation message (`msgs.Game.CreateGameConfirmPrompt` with **flattened role list using `scenario.FlatRoles()`**), with **both "Start Game" (direct assignment) and "Choose Card" (interactive selection)** buttons, plus "Cancel". Uses `ModeMarkdownV2`.
+    *   `game.HandleStartGameCallback`: Callback handler for the "Start" button. Calls `AssignRoles`, **sends role info via PM (using `game.PrepareAssignRoleMessage`)**, then edits the original message (`msgs.Game.CreateGameStartedSuccess` with user profile links and roles). Uses `ModeMarkdownV2`.
     *   `game.HandleCancelGameCreationCallback`: Callback handler for the "Cancel" button. Edits message to show cancellation.
-    *   `game.HandleAssignRoles`: Handles the `/assign_roles` command (likely becoming obsolete due to the interactive flow). Iterates over the returned assignment map (`map[User]Role`) and sends private messages.
-    *   `game.HandleChooseCardStart`: (UPDATED) Gets/Creates admin and player books. Calls `PrepareAdminAssignmentMessage` *before* sending/editing to get initial content. Adds sent messages to the respective books using `AddActiveMessage`.
-    *   `game.HandlePlayerSelectsCard`: (UPDATED) Gets/Creates admin and player books. Calls `RaiseRefreshNeeded()` on both. Removes selecting player's message using `RemoveActiveMessage`. If `allSelected`, calls `h.RefreshMessages(adminRefresher)` directly before cleaning up books with `Delete...` methods.
+    *   `game.HandleAssignRoles`: Handles the `/assign_roles` command. Iterates over the returned assignment map (`map[User]Role`) and **sends private messages using `game.PrepareAssignRoleMessage`**.
+    *   **NEW:** `game.HandleChooseCardStart`: Initiates interactive role selection. Fetches game/scenario/players, validates state/permissions. Creates and stores `InteractiveSelectionState` (with shuffled roles). Gets/Creates admin tracker and player refresher books. Sends initial messages to admin (using `PrepareAdminAssignmentMessage`) and players (using `PreparePlayerRoleSelectionMarkup`), adding them to their respective books.
+    *   **NEW:** `game.HandlePlayerSelectsCard`: Handles a player clicking a role card button. Fetches game state, validates. Updates `InteractiveSelectionState` (marks role taken, stores player choice). Triggers refresh on admin tracker and player refresher books. Removes the selecting player's message from the refresher book. If all roles are selected, triggers final assignment, sends private messages, updates admin message, and cleans up state/books.
 
 ## 5. `handler/document_handler.go`
 
@@ -98,6 +104,9 @@
     *   Downloads the file content using `c.Bot().File()`.
     *   Calls the `AddScenarioJSONHandler` use case.
     *   Sends success or error messages back to the user.
+*   **NEW:** `ImageID` field added to `Role` struct.
+*   **NEW:** `Side.Roles` is now `[]Role` instead of `[]string`.
+*   **NEW:** `Scenario.FlatRoles() []Role` method added.
 
 ## 6. `messages/`
 
@@ -135,17 +144,4 @@
 
 *   **Rule:** Any message in the Telegram presentation layer that needs to be dynamically updated based on state changes **MUST** use the `tgutil.RefreshingMessageBook` pattern.
 *   **Implementation Steps:** (UPDATED)
-    1.  **Identify Scope:** Determine the scope (e.g., per-room, per-game). Create a map in `BotHandler` (e.g., `adminAssignmentTrackers map[gameEntity.GameID]*tgutil.RefreshingMessageBook`) to hold `RefreshingMessageBook` instances, keyed by the scope identifier. Protect this map with a `sync.RWMutex`.
-    2.  **Define Message Generation Function:** Create an **exported message preparation function** (e.g., `game.PrepareAdminAssignmentMessage`) that fetches necessary data and returns `(string, []interface{}, error)`.
-    3.  **Manage Books:** Implement `Get/GetOrCreate/Delete` helper methods on `BotHandler` for the map. The `GetOrCreate...` method **MUST** call `tgutil.NewRefreshState`, passing the specific message generation function defined in step 2.
-    4.  **Store Messages:** When sending/editing the initial refreshing message, get the book (`GetOrCreate...`), create a `tgutil.RefreshingMessage{ChatID, MessageID, Data}`, and store it using `book.AddActiveMessage(chatID, refreshMsg)`.
-    5.  **Trigger Refresh:** Handlers/callbacks modifying state **MUST** get the relevant book (`Get...` or `GetOrCreate...`) and call `book.RaiseRefreshNeeded()`.
-    6.  **Implement Refresh Logic (`refresh.go`):**
-        *   In `StartRefreshTimer()`, add a loop over the map in `BotHandler` (using mutex).
-        *   Check `book.ConsumeRefreshNeeded()`.
-        *   If true, call the *single* generic refresh execution method: `h.RefreshMessages(book)`.
-    7.  **Implement Refresh Execution (`refresh.go`):**
-        *   The `RefreshMessages(book)` method iterates through `book.GetAllActiveMessages()`.
-        *   For each message, it calls `book.GetMessage(chatID, payload.Data)` to get the new content/opts.
-        *   It uses `h.bot.Edit()` to apply the update.
-    8.  **Cleanup:** (Same as previous rule: Use `Delete...` for book scope, `RemoveActiveMessage` for specific finalized messages). 
+    1.  **Identify Scope:** Determine the scope (e.g., per-room, per-game). Create a map in `BotHandler` (e.g., `adminAssignmentTrackers map[gameEntity.GameID]*tgutil.RefreshingMessageBook`) to hold `RefreshingMessageBook` instances, keyed by the scope identifier. Protect this map with a `

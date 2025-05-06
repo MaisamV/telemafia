@@ -115,13 +115,10 @@ func HandleSelectScenarioForCreateGame(
 	}
 
 	// Flatten roles for display and count
-	flatRoles := make([]scenarioEntity.Role, 0)
+	flatRoles := scenario.FlatRoles()
 	var roleNames []string
-	for _, side := range scenario.Sides {
-		for _, roleName := range side.Roles {
-			flatRoles = append(flatRoles, scenarioEntity.Role{Name: roleName, Side: side.Name})
-			roleNames = append(roleNames, roleName)
-		}
+	for _, role := range flatRoles {
+		roleNames = append(roleNames, role.Name)
 	}
 
 	// Optional: Early check if player count matches role count
@@ -179,8 +176,8 @@ func HandleStartCreatedGame(
 	for user, role := range assignments {
 		targetUser := &telebot.User{ID: int64(user.ID)}
 		// Need Room Name - should fetch game details first?
-		privateMsg := fmt.Sprintf(msgs.Game.AssignRolesSuccessPrivate, role.Name, role.Side)
-		_, pmErr := bot.Send(targetUser, privateMsg, telebot.ModeMarkdownV2)
+		privateMsg, opts := PrepareAssignRoleMessage(msgs, role)
+		_, pmErr := bot.Send(targetUser, privateMsg, opts...)
 		if pmErr != nil {
 			log.Printf(msgs.Game.AssignRolesErrorSendingPrivate, user.ID, pmErr)
 			// Collect errors?
@@ -263,12 +260,7 @@ func HandleChooseCardStart(
 	}
 
 	// 3. Flatten and Shuffle Roles
-	flatRoles := make([]scenarioEntity.Role, 0)
-	for _, side := range scenario.Sides {
-		for _, roleName := range side.Roles {
-			flatRoles = append(flatRoles, scenarioEntity.Role{Name: roleName, Side: side.Name})
-		}
-	}
+	flatRoles := scenario.FlatRoles()
 	if len(players) != len(flatRoles) {
 		errMsg := fmt.Sprintf(msgs.Game.AssignRolesErrorPlayerMismatch, len(flatRoles), len(players), game.ID)
 		log.Printf("ChooseCardStart: Mismatch players(%d) roles(%d) for game %s", len(players), len(flatRoles), game.ID)
@@ -444,8 +436,8 @@ func HandlePlayerSelectsCard(
 	}
 
 	// 5. Confirm to Player & Clean Up Player Message -> EDIT instead of delete
-	confirmMsgText := fmt.Sprintf(msgs.Game.AssignRolesSuccessPrivate, selectedRole.Name, selectedRole.Side)
-	err = c.Edit(confirmMsgText, telebot.ModeMarkdownV2) // Edit the original message
+	confirmMsgText, opts := PrepareAssignRoleMessage(msgs, selectedRole)
+	err = c.Edit(confirmMsgText, opts...) // Edit the original message
 	if err != nil {
 		log.Printf("PlayerSelectsCard: Failed to EDIT player confirmation message for user %d: %v", player.ID, err)
 		// If editing fails, maybe try sending?

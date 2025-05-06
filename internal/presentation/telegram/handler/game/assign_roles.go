@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"telemafia/internal/domain/scenario/entity"
 
 	gameEntity "telemafia/internal/domain/game/entity"
 	gameCommand "telemafia/internal/domain/game/usecase/command"
@@ -44,12 +45,27 @@ func HandleAssignRoles(
 
 	for user, role := range assignments {
 		targetUser := &telebot.User{ID: int64(user.ID)}
-		privateMsg := fmt.Sprintf(msgs.Game.AssignRolesSuccessPrivate, role.Name, role.Side)
-		_, err := bot.Send(targetUser, privateMsg)
+		privateMsg, opts := PrepareAssignRoleMessage(msgs, role)
+		_, err := bot.Send(targetUser, privateMsg, opts...)
 		if err != nil {
 			log.Printf(msgs.Game.AssignRolesErrorSendingPrivate, user.ID, err)
 		}
 	}
 
 	return c.Send(fmt.Sprintf(msgs.Game.AssignRolesSuccessPublic, gameID))
+}
+
+func PrepareAssignRoleMessage(msgs *messages.Messages, role entity.Role) (interface{}, []interface{}) {
+	confirmMsgText := fmt.Sprintf(msgs.Game.AssignRolesSuccessPrivate, role.Name, role.Side)
+	var what interface{}
+	if role.ImageID != "" {
+		what = &telebot.Photo{File: telebot.File{FileID: role.ImageID},
+			Caption: confirmMsgText}
+	} else {
+		what = confirmMsgText
+	}
+	opts := []interface{}{
+		telebot.ModeMarkdownV2,
+	}
+	return what, opts
 }

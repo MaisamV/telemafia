@@ -58,8 +58,8 @@ func (h *AddScenarioJSONHandler) Handle(ctx context.Context, cmd AddScenarioJSON
 			return nil, fmt.Errorf("side '%s' must have at least one role", side.Name)
 		}
 
-		for roleIdx, roleName := range side.Roles {
-			if roleName == "" {
+		for roleIdx, role := range side.Roles {
+			if role.Name == "" {
 				return nil, fmt.Errorf("role name cannot be empty (side '%s', role index %d)", side.Name, roleIdx)
 			}
 			totalRoles++

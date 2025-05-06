@@ -73,8 +73,9 @@ func (h *AssignRolesHandler) Handle(ctx context.Context, cmd AssignRolesCommand)
 	// Flatten roles from sides into a single list
 	flatRoles := make([]scenarioEntity.Role, 0)
 	for _, side := range scenario.Sides {
-		for _, roleName := range side.Roles {
-			flatRoles = append(flatRoles, scenarioEntity.Role{Name: roleName, Side: side.Name})
+		for _, role := range side.Roles {
+			role.Side = side.Name
+			flatRoles = append(flatRoles, role)
 		}
 	}
 
