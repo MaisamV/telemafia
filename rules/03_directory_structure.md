@@ -40,4 +40,8 @@ Refer to `blueprint/06_directory_structure.md` for the full tree. This guide sum
     *   Loading code: `internal/presentation/telegram/messages/loader.go`
     *   Go struct definitions: `internal/presentation/telegram/messages/messages.go`
 *   **Main Application Entry / DI Wiring:**
-    *   `cmd/telemafia/main.go` 
+    *   `cmd/telemafia/main.go`
+*   **Tests:**
+    *   Unit Tests: `tests/unit/` (for tests focusing on individual components or functions in isolation, e.g., `shuffle_distribution_test.go`).
+    *   Integration Tests: `tests/integration/` (for tests verifying interactions between multiple components, e.g., simulating a full game flow via API calls if applicable).
+    *   *Note:* While a central `tests` directory is provided, unit tests can also be co-located with the package they test (e.g., `internal/domain/<module_name>/entity/<entity>_test.go`), following standard Go conventions. The chosen approach for new tests should be consistent with existing patterns for similar tests. 

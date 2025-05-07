@@ -27,7 +27,7 @@
     *   The method sorts roles by a hash of their name before returning.
 *   **`Scenario.GetShuffledRoles(playerNum int) []Role` (Method):**
     *   NEW: Calls `GetRoles(playerNum)` and then shuffles the resulting list.
-    *   This is the primary method used by the Game domain to get roles for assignment.
+    *   This is the primary method used by the Game domain to get roles for assignment. The shuffling aims for a statistically reasonable distribution of roles, which can be verified (as exemplified by tests like `TestRoleShuffleDistribution`).
 
 ## 2. `port/scenario_repository.go`
 
