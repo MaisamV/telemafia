@@ -9,6 +9,7 @@ import (
 // This is used *after* extracting roles from the Scenario structure for assignment.
 type Role struct {
 	Name    string `json:"name"`
+	AddedAt int    `json:"added_at,omitempty"`
 	ImageID string `json:"image_id,omitempty"`
 	Side    string `json:"side,omitempty"` // e.g., "Mafia", "Civilian", "Neutral"
 }
@@ -28,19 +29,21 @@ type Scenario struct {
 	Sides []Side `json:"sides"`
 }
 
-func (s *Scenario) FlatRoles() []Role {
+func (s *Scenario) FlatRoles(playerNum int) []Role {
 	flatRoles := make([]Role, 0)
 	for _, side := range s.Sides {
 		for _, role := range side.Roles {
-			role.Side = side.Name
-			flatRoles = append(flatRoles, role)
+			if playerNum >= role.AddedAt {
+				role.Side = side.Name
+				flatRoles = append(flatRoles, role)
+			}
 		}
 	}
 	return flatRoles
 }
 
 func (s *Scenario) GetRoles(playerNum int) []Role {
-	flatRoles := s.FlatRoles()
+	flatRoles := s.FlatRoles(playerNum)
 	for _, side := range s.Sides {
 		currentRoleNum := len(flatRoles)
 		if currentRoleNum < playerNum && side.DefaultRole != nil {

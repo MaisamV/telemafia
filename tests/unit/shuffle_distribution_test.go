@@ -26,7 +26,7 @@ func TestRoleShuffleDistribution(t *testing.T) {
 	// 1. Load Scenario
 	// IMPORTANT: Replace with the correct relative path from this test file
 	// Path updated assuming the file is now in tests/unit/
-	scenarioFilePath := "../../resources/godfather.json"
+	scenarioFilePath := "../../resources/scenario/godfather.json"
 
 	file, err := os.Open(scenarioFilePath)
 	if err != nil {
@@ -82,7 +82,7 @@ func TestRoleShuffleDistribution(t *testing.T) {
 	expectedMafiaChance := float64(expectedMafiaNum) / float64(playerNum)
 	t.Logf("Expected Mafia chance per slot: %.4f (based on %d mafia / %d players)", expectedMafiaChance, expectedMafiaNum, playerNum)
 
-	tolerance := 0.01
+	tolerance := 0.005
 	distributionOK := true
 
 	for slot := 0; slot < playerNum; slot++ {
