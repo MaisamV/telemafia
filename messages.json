@@ -112,7 +112,7 @@
     "assignments_confirmed_response": "Assignments confirmed for game %s",
     "create_game_select_room_prompt": "برای شروع بازی گروه رو انتخاب کن:",
     "create_game_select_scenario_prompt": "سناریو بازی رو انتخاب کن:",
-    "create_game_confirm_prompt": "دکمه *پخش نقش* رو بزن تا نقش ها تصادفی و اتوماتیک برای بازیکنان فرستاده بشه\n\n\nدکمه *انتخاب کارت* رو بزن تا بازیکنان نقششون رو خودشون تصادفی انتخاب کنن\n\n```نقش ها:\n- %s```",
+    "create_game_confirm_prompt": "دکمه *پخش نقش* رو بزن تا نقش ها تصادفی و اتوماتیک برای بازیکنان فرستاده بشه\n\n\nدکمه *انتخاب کارت* رو بزن تا بازیکنان نقششون رو خودشون تصادفی انتخاب کنن\n\n```نقش\u200Cها:\n- %s```",
     "create_game_started_success": "نقش ها پخش شد:\n\n||%s||",
     "create_game_error_fetch_rooms": "Error fetching rooms: %v",
     "create_game_error_fetch_scenarios": "Error fetching scenarios: %v",

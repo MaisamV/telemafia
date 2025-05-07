@@ -11,7 +11,6 @@ import (
 	roomPort "telemafia/internal/domain/room/port" // Use imported roomPort
 	scenarioEntity "telemafia/internal/domain/scenario/entity"
 	scenarioPort "telemafia/internal/domain/scenario/port"
-	"telemafia/internal/shared/common"
 	sharedEntity "telemafia/internal/shared/entity"
 )
 
@@ -70,22 +69,6 @@ func (h *AssignRolesHandler) Handle(ctx context.Context, cmd AssignRolesCommand)
 		return nil, fmt.Errorf("error fetching scenario '%s': %w", game.Scenario.ID, err)
 	}
 
-	// Flatten roles from sides into a single list
-	flatRoles := make([]scenarioEntity.Role, 0)
-	for _, side := range scenario.Sides {
-		for _, role := range side.Roles {
-			role.Side = side.Name
-			flatRoles = append(flatRoles, role)
-		}
-	}
-
-	log.Printf("Using %d roles from scenario '%s' across %d sides", len(flatRoles), game.Scenario.ID, len(scenario.Sides))
-
-	// Sort the flat list by hash of role name
-	sort.Slice(flatRoles, func(i, j int) bool {
-		return common.Hash(flatRoles[i].Name) < common.Hash(flatRoles[j].Name)
-	})
-
 	// Fetch players from the game's room
 	// Room presence already checked above
 	players, err := h.roomRepo.GetPlayersInRoom(game.Room.ID)
@@ -101,29 +84,19 @@ func (h *AssignRolesHandler) Handle(ctx context.Context, cmd AssignRolesCommand)
 			users = append(users, *p)
 		}
 	}
-	// Sort the flat list by hash of role name
-	sort.Slice(flatRoles, func(i, j int) bool {
-		return common.Hash(flatRoles[i].Name) < common.Hash(flatRoles[j].Name)
-	})
+
 	sort.Slice(users, func(i, j int) bool {
 		return users[i].ID < users[j].ID
 	})
 	log.Printf("Found %d players in room '%s'", len(users), game.Room.ID)
 
+	rolesToAssign := scenario.GetShuffledRoles(len(users))
 	// Ensure we have enough roles for the players
-	if len(flatRoles) != len(users) {
-		msg := fmt.Sprintf("role count (%d) does not match player count (%d) for game '%s'", len(flatRoles), len(users), game.ID)
+	if len(rolesToAssign) != len(users) {
+		msg := fmt.Sprintf("role count (%d) does not match player count (%d) for game '%s'", len(rolesToAssign), len(users), game.ID)
 		log.Println(msg)
 		return nil, errors.New(msg)
 	}
-
-	// Randomly assign roles to players
-	rolesToAssign := make([]scenarioEntity.Role, len(flatRoles))
-	copy(rolesToAssign, flatRoles)
-
-	common.Shuffle(len(rolesToAssign), func(i, j int) {
-		rolesToAssign[i], rolesToAssign[j] = rolesToAssign[j], rolesToAssign[i]
-	})
 
 	// Store assignments in the game entity and prepare response map
 	assignments := make(map[sharedEntity.User]scenarioEntity.Role)

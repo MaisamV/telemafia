@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"sort"
 	"strconv"
 	"strings"
 	telegram "telemafia/internal/presentation/telegram/handler/room"
@@ -15,10 +14,8 @@ import (
 	gameQuery "telemafia/internal/domain/game/usecase/query"
 	roomEntity "telemafia/internal/domain/room/entity"
 	roomQuery "telemafia/internal/domain/room/usecase/query"
-	scenarioEntity "telemafia/internal/domain/scenario/entity"
 	scenarioQuery "telemafia/internal/domain/scenario/usecase/query"
 	messages "telemafia/internal/presentation/telegram/messages"
-	"telemafia/internal/shared/common"
 	sharedEntity "telemafia/internal/shared/entity"
 
 	"gopkg.in/telebot.v3"
@@ -115,7 +112,7 @@ func HandleSelectScenarioForCreateGame(
 	}
 
 	// Flatten roles for display and count
-	flatRoles := scenario.FlatRoles()
+	flatRoles := scenario.GetRoles(len(players))
 	var roleNames []string
 	for _, role := range flatRoles {
 		roleNames = append(roleNames, role.Name)
@@ -260,22 +257,13 @@ func HandleChooseCardStart(
 	}
 
 	// 3. Flatten and Shuffle Roles
-	flatRoles := scenario.FlatRoles()
-	if len(players) != len(flatRoles) {
-		errMsg := fmt.Sprintf(msgs.Game.AssignRolesErrorPlayerMismatch, len(flatRoles), len(players), game.ID)
-		log.Printf("ChooseCardStart: Mismatch players(%d) roles(%d) for game %s", len(players), len(flatRoles), game.ID)
+	shuffledRoles := scenario.GetShuffledRoles(len(players))
+	log.Printf("Shuffled Roles: %v", shuffledRoles)
+	if len(players) != len(shuffledRoles) {
+		errMsg := fmt.Sprintf(msgs.Game.AssignRolesErrorPlayerMismatch, len(shuffledRoles), len(players), game.ID)
+		log.Printf("ChooseCardStart: Mismatch players(%d) roles(%d) for game %s", len(players), len(shuffledRoles), game.ID)
 		return c.Respond(&telebot.CallbackResponse{Text: errMsg, ShowAlert: true})
 	}
-
-	sort.Slice(flatRoles, func(i, j int) bool {
-		return common.Hash(flatRoles[i].Name) < common.Hash(flatRoles[j].Name)
-	})
-	shuffledRoles := make([]scenarioEntity.Role, len(flatRoles))
-	copy(shuffledRoles, flatRoles)
-	common.Shuffle(len(shuffledRoles), func(i, j int) {
-		shuffledRoles[i], shuffledRoles[j] = shuffledRoles[j], shuffledRoles[i]
-	})
-	log.Printf("Shuffled Roles: %v", shuffledRoles)
 
 	// 4. Initialize Interactive State
 	initialSelections := make(map[sharedEntity.UserID]tgutil.PlayerSelection)

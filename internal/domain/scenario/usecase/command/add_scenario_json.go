@@ -48,13 +48,11 @@ func (h *AddScenarioJSONHandler) Handle(ctx context.Context, cmd AddScenarioJSON
 		return nil, fmt.Errorf("scenario must have at least one side defined")
 	}
 
-	totalRoles := 0
-
 	for sideIdx, side := range scenario.Sides {
 		if side.Name == "" {
 			return nil, fmt.Errorf("side name cannot be empty (side index %d)", sideIdx)
 		}
-		if len(side.Roles) == 0 {
+		if len(side.Roles) == 0 && side.DefaultRole == nil {
 			return nil, fmt.Errorf("side '%s' must have at least one role", side.Name)
 		}
 
@@ -62,12 +60,7 @@ func (h *AddScenarioJSONHandler) Handle(ctx context.Context, cmd AddScenarioJSON
 			if role.Name == "" {
 				return nil, fmt.Errorf("role name cannot be empty (side '%s', role index %d)", side.Name, roleIdx)
 			}
-			totalRoles++
 		}
-	}
-
-	if totalRoles == 0 { // Double check after iterating
-		return nil, fmt.Errorf("scenario must contain at least one role overall")
 	}
 
 	// 4. Assign Internal ID (Input JSON doesn't contain it)

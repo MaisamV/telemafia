@@ -38,7 +38,7 @@ Defines the interfaces required by the Game domain to interact with persistence 
 
 *   **`assign_roles.go`:**
     *   `AssignRolesCommand`: Contains `Requester` (User), `GameID`.
-    *   `AssignRolesHandler`: Depends on `GameRepository`, `ScenarioReader`, `RoomReader`. Fetches game, performs permission check (global admin OR moderator of the game's room), fetches scenario and players, uses `Scenario.FlatRoles()` to get a flat list of roles, checks player/role count match, sorts roles by name hash and users by ID, shuffles roles (using a copy), updates game `Assignments` map, sets game state, updates game in repository. Returns the assignments map.
+    *   `AssignRolesHandler`: Depends on `GameRepository`, `ScenarioReader`, `RoomReader`. Fetches game, performs permission check (global admin OR moderator of the game's room), fetches scenario and players, calls `Scenario.GetShuffledRoles(playerCount)` to get the dynamically generated and shuffled list of roles, checks player/role count match, updates game `Assignments` map, sets game state, updates game in repository. Returns the assignments map.
 *   **`create_game.go`:**
     *   `CreateGameCommand`: Contains `Requester` (User), `RoomID`, `ScenarioID`.
     *   `CreateGameHandler`: Depends on `GameRepository`, `RoomClient`, `ScenarioClient`. Fetches room and scenario via clients, performs permission check (global admin OR moderator of the fetched room), creates new `Game` entity, saves game via repository. Returns the created game.
