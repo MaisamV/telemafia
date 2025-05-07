@@ -1,0 +1,60 @@
+{
+  "name": "بازپرس",
+  "sides": [
+    {
+      "name": "مافیا",
+      "population_rate": 0.33334,
+      "default_role": {
+        "name": "مافیا ساده"
+      },
+      "roles": [
+        {
+          "name": "رئیس مافیا",
+          "image_id": "AgACAgQAAxkDAAIMwGgZszWzbSo37-a90pgCiVU-39R0AAIFyTEbCtTRUELjDAKSCOslAQADAgADdwADNgQ",
+          "added_at": 3
+        },
+        {
+          "name": "ناتو",
+          "added_at": 6
+        },
+        {
+          "name": "شیاد",
+          "added_at": 9
+        }
+      ]
+    },
+    {
+      "name": "شهروند",
+      "default_role": {
+        "name": "شهروند ساده"
+      },
+      "roles": [
+        {
+          "name": "بازپرس",
+          "added_at": 1
+        },
+        {
+          "name": "کاراگاه",
+          "image_id": "AgACAgQAAxkDAAIMw2gZt_XLz2HUr0aopKpqFdGiFhdkAAIiyTEbCtTRUI4tFp1Cv7zzAQADAgADdwADNgQ",
+          "added_at": 7
+        },
+        {
+          "name": "تک تیرانداز",
+          "added_at": 11
+        },
+        {
+          "name": "دکتر",
+          "added_at": 4
+        },
+        {
+          "name": "محقق",
+          "added_at": 5
+        },
+        {
+          "name": "رویین تن",
+          "added_at": 2
+        }
+      ]
+    }
+  ]
+}

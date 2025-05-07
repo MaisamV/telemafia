@@ -1,0 +1,103 @@
+{
+  "name": "رویابین",
+  "sides": [
+    {
+      "name": "مافیا",
+      "roles": [
+        {
+          "name": "پدر خوانده",
+          "image_id": "AgACAgQAAxkDAAIMwGgZszWzbSo37-a90pgCiVU-39R0AAIFyTEbCtTRUELjDAKSCOslAQADAgADdwADNgQ",
+          "added_at": 3
+        },
+        {
+          "name": "ناتو",
+          "added_at": 6
+        },
+        {
+          "name": "شب خُسب",
+          "added_at": 9
+        },
+        {
+          "name": "دکتر لکتر",
+          "added_at": 12
+        },
+        {
+          "name": "معشوقه",
+          "added_at": 15
+        },
+        {
+          "name": "سم ساز",
+          "added_at": 18
+        }
+      ]
+    },
+    {
+      "name": "شهروند",
+      "roles": [
+        {
+          "name": "گورکن",
+          "added_at": 1
+        },
+        {
+          "name": "بازپرس",
+          "added_at": 2
+        },
+        {
+          "name": "دکتر",
+          "added_at": 4
+        },
+        {
+          "name": "گورکن 2",
+          "added_at": 5
+        },
+        {
+          "name": "کاراگاه",
+          "image_id": "AgACAgQAAxkDAAIMw2gZt_XLz2HUr0aopKpqFdGiFhdkAAIiyTEbCtTRUI4tFp1Cv7zzAQADAgADdwADNgQ",
+          "added_at": 7
+        },
+        {
+          "name": "اسنایپر",
+          "added_at": 8
+        },
+        {
+          "name": "فراماسون",
+          "added_at": 10
+        },
+        {
+          "name": "شهردار",
+          "added_at": 13
+        },
+        {
+          "name": "عطار",
+          "added_at": 14
+        },
+        {
+          "name": "تفنگ دار",
+          "added_at": 17
+        },
+        {
+          "name": "تله انداز",
+          "added_at": 19
+        }
+      ]
+    },
+    {
+      "name": "مستقل",
+      "roles": [
+        {
+          "name": "قمار باز",
+          "added_at": 11
+        }
+      ]
+    },
+    {
+      "name": "مستقل 2",
+      "roles": [
+        {
+          "name": "فراموشکار",
+          "added_at": 16
+        }
+      ]
+    }
+  ]
+}

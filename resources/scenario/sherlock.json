@@ -1,0 +1,61 @@
+{
+  "name": "شرلوک",
+  "sides": [
+    {
+      "name": "مافیا",
+      "population_rate": 0.33334,
+      "default_role": {
+        "name": "مافیا ساده"
+      },
+      "roles": [
+        {
+          "name": "پدر خوانده",
+          "image_id": "AgACAgQAAxkDAAIMwGgZszWzbSo37-a90pgCiVU-39R0AAIFyTEbCtTRUELjDAKSCOslAQADAgADdwADNgQ",
+          "added_at": 3
+        },
+        {
+          "name": "ماتادور",
+          "added_at": 9
+        },
+        {
+          "name": "ساول گودمن",
+          "added_at": 6
+        }
+      ]
+    },
+    {
+      "name": "مستقل",
+      "roles": [
+        {
+          "name": "شرلوک هلمز",
+          "added_at": 5
+        }
+      ]
+    },
+    {
+      "name": "شهروند",
+      "default_role": {
+        "name": "شهروند ساده"
+      },
+      "roles": [
+        {
+          "name": "کنستانتین",
+          "added_at": 1
+        },
+        {
+          "name": "دکتر واتسون",
+          "added_at": 4
+        },
+        {
+          "name": "همشهری کین",
+          "image_id": "AgACAgQAAxkDAAIMw2gZt_XLz2HUr0aopKpqFdGiFhdkAAIiyTEbCtTRUI4tFp1Cv7zzAQADAgADdwADNgQ",
+          "added_at": 7
+        },
+        {
+          "name": "لئون",
+          "added_at": 10
+        }
+      ]
+    }
+  ]
+}

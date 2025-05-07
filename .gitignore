@@ -1,4 +1,5 @@
 /.idea
 /.idea/*
 *.exe
-/resources/*
+/resources/image
+/resources/image/*
