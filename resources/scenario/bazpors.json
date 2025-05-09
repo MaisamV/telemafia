@@ -30,8 +30,12 @@
       },
       "roles": [
         {
+          "name": "دکتر",
+          "added_at": 4
+        },
+        {
           "name": "بازپرس",
-          "added_at": 1
+          "added_at": 5
         },
         {
           "name": "کاراگاه",
@@ -39,20 +43,16 @@
           "added_at": 7
         },
         {
-          "name": "تک تیرانداز",
-          "added_at": 11
-        },
-        {
-          "name": "دکتر",
-          "added_at": 4
-        },
-        {
           "name": "محقق",
-          "added_at": 5
+          "added_at": 8
         },
         {
           "name": "رویین تن",
-          "added_at": 2
+          "added_at": 9
+        },
+        {
+          "name": "تک تیرانداز",
+          "added_at": 11
         }
       ]
     }
