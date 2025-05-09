@@ -356,12 +356,22 @@ func (h *BotHandler) DeleteInteractiveSelectionState(gameID gameEntity.GameID) {
 	delete(h.interactiveSelections, gameID)
 }
 
-// Helper methods to manage player role choice refreshers safely (NEW)
+// GetPlayerRoleRefresher Helper methods to manage player role choice refreshers safely (NEW)
 func (h *BotHandler) GetPlayerRoleRefresher(gameID gameEntity.GameID) (*tgutil.RefreshingMessageBook, bool) {
 	h.playerRefreshMutex.RLock()
 	defer h.playerRefreshMutex.RUnlock()
 	book, exists := h.playerRoleChoiceRefreshers[gameID]
 	return book, exists
+}
+
+// RemovePlayerRoleActiveMessage Helper methods to remove player role active message from game choice refreshers safely
+func (h *BotHandler) RemovePlayerRoleActiveMessage(gameID gameEntity.GameID, userID int64) {
+	h.playerRefreshMutex.RLock()
+	defer h.playerRefreshMutex.RUnlock()
+	book, exists := h.playerRoleChoiceRefreshers[gameID]
+	if exists {
+		book.RemoveActiveMessage(userID)
+	}
 }
 
 func (h *BotHandler) GetOrCreatePlayerRoleRefresher(gameID gameEntity.GameID) *tgutil.RefreshingMessageBook {

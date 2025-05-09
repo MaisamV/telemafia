@@ -204,6 +204,7 @@ type BotHandlerInterface interface {
 	DeleteInteractiveSelectionState(gameID gameEntity.GameID)
 	GetOrCreatePlayerRoleRefresher(gameID gameEntity.GameID) *tgutil.RefreshingMessageBook
 	GetPlayerRoleRefresher(gameID gameEntity.GameID) (*tgutil.RefreshingMessageBook, bool)
+	RemovePlayerRoleActiveMessage(gameID gameEntity.GameID, userID int64)
 	DeletePlayerRoleRefresher(gameID gameEntity.GameID)
 	GetOrCreateAdminAssignmentTracker(gameID gameEntity.GameID) *tgutil.RefreshingMessageBook
 	GetAdminAssignmentTracker(gameID gameEntity.GameID) (*tgutil.RefreshingMessageBook, bool)
@@ -424,18 +425,14 @@ func HandlePlayerSelectsCard(
 	}
 
 	// 5. Confirm to Player & Clean Up Player Message -> EDIT instead of delete
+	// remove this player's message from the player refresher
+	h.RemovePlayerRoleActiveMessage(gameID, c.Message().Chat.ID)
 	confirmMsgText, opts := PrepareAssignRoleMessage(msgs, selectedRole)
 	err = c.Edit(confirmMsgText, opts...) // Edit the original message
 	if err != nil {
 		log.Printf("PlayerSelectsCard: Failed to EDIT player confirmation message for user %d: %v", player.ID, err)
-		// If editing fails, maybe try sending?
-		// We don't remove from the refresher if edit fails, it might get updated later.
-	} else {
-		// Successfully edited, remove this player's message from the player refresher
-		if playerRefresher, exists := h.GetPlayerRoleRefresher(gameID); exists {
-			playerRefresher.RemoveActiveMessage(c.Message().Chat.ID)
-			log.Printf("PlayerSelectsCard: Removed player %d message from refresher for game %s", player.ID, gameID)
-		}
+		_ = c.Delete()                        // Edit the original message
+		err = c.Send(confirmMsgText, opts...) // Try sending the original message
 	}
 
 	// 6. Trigger Refreshes (Added Refresh Logic)
