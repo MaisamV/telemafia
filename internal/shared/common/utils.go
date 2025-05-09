@@ -45,3 +45,19 @@ func InitSeed() {
 func Shuffle(n int, swap func(i, j int)) {
 	r.Shuffle(n, swap)
 }
+
+var escapeChars = "_*[]()~`>#+-=|{}.!"
+
+func EscapeMarkdownV2(text string) string {
+	var escapedBytes []int32
+	for _, char := range text {
+		for _, escapedChar := range escapeChars {
+			if char == escapedChar {
+				escapedBytes = append(escapedBytes, '\\')
+				break
+			}
+		}
+		escapedBytes = append(escapedBytes, char)
+	}
+	return string(escapedBytes)
+}

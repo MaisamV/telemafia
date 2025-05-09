@@ -1,6 +1,9 @@
 package entity
 
-import "fmt"
+import (
+	"fmt"
+	"telemafia/internal/shared/common"
+)
 
 // UserID represents a unique identifier for a user
 type UserID int64
@@ -24,10 +27,11 @@ func (u *User) CanCreateRoom() bool {
 
 func (u *User) GetProfileLink() string {
 	profileLink := ""
+	escapedFirstname := common.EscapeMarkdownV2(u.FirstName)
 	if u.Username != "" {
-		profileLink = fmt.Sprintf("[%s](https://t.me/%s)", u.FirstName, u.Username)
+		profileLink = fmt.Sprintf("[%s](https://t.me/%s)", escapedFirstname, u.Username)
 	} else {
-		profileLink = fmt.Sprintf("[%s](tg://user?id=%d)", u.FirstName, u.ID)
+		profileLink = fmt.Sprintf("[%s](tg://user?id=%d)", escapedFirstname, u.ID)
 	}
 	return profileLink
 }

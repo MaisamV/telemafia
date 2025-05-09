@@ -60,6 +60,9 @@ func HandleJoinRoom(
 		return err
 	}
 	msg, err := c.Bot().Send(c.Sender(), message, opts...)
+	if err != nil {
+		return err
+	}
 	roomDetail.AddActiveMessage(chatID, &tgutil.RefreshingMessage{
 		MessageID: msg.ID,
 		ChatID:    msg.Chat.ID,
