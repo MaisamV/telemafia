@@ -19,12 +19,16 @@ func TestScenarioRoleGenerationAndMafiaCount(t *testing.T) {
 	common.InitSeed()
 
 	scenarioDir := "../../resources/scenario/" // Adjusted path from tests/unit/
-	scenarioFiles := []string{
-		"classic.json",
-		"godfather.json",
-		"sherlock.json",
-		"bazpors.json",
-		"royabin.json",
+	entries, err := os.ReadDir(scenarioDir)
+	if err != nil {
+		t.Fatalf("Failed to read scenario directory: %v", err)
+	}
+
+	var scenarioFiles []string
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".json") {
+			scenarioFiles = append(scenarioFiles, entry.Name())
+		}
 	}
 
 	scenarioRepo := memrepo.NewInMemoryScenarioRepository()
