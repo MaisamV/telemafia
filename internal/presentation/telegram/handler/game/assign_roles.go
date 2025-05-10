@@ -6,6 +6,7 @@ import (
 	"log"
 	"strings"
 	"telemafia/internal/domain/scenario/entity"
+	"telemafia/internal/shared/common"
 
 	gameEntity "telemafia/internal/domain/game/entity"
 	gameCommand "telemafia/internal/domain/game/usecase/command"
@@ -57,10 +58,16 @@ func HandleAssignRoles(
 
 func PrepareAssignRoleMessage(msgs *messages.Messages, role entity.Role) (interface{}, []interface{}) {
 	confirmMsgText := fmt.Sprintf(msgs.Game.AssignRolesSuccessPrivate, role.Name, role.Side)
+	if role.Description != "" {
+		confirmMsgText = fmt.Sprintf("%s\nتوضیحات: ||%s||", confirmMsgText, common.EscapeMarkdownV2(role.Description))
+	}
 	var what interface{}
 	if role.ImageID != "" {
-		what = &telebot.Photo{File: telebot.File{FileID: role.ImageID},
-			Caption: confirmMsgText}
+		what = &telebot.Photo{
+			File:       telebot.File{FileID: role.ImageID},
+			HasSpoiler: true,
+			Caption:    confirmMsgText,
+		}
 	} else {
 		what = confirmMsgText
 	}
