@@ -8,10 +8,11 @@ import (
 // Role represents a single assignable role with its name and side affiliation.
 // This is used *after* extracting roles from the Scenario structure for assignment.
 type Role struct {
-	Name    string `json:"name"`
-	AddedAt int    `json:"added_at,omitempty"`
-	ImageID string `json:"image_id,omitempty"`
-	Side    string `json:"side,omitempty"` // e.g., "Mafia", "Civilian", "Neutral"
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	AddedAt     int    `json:"added_at,omitempty"`
+	ImageID     string `json:"image_id,omitempty"`
+	Side        string `json:"side,omitempty"` // e.g., "Mafia", "Civilian", "Neutral"
 }
 
 // Side represents a group of roles within a scenario.
