@@ -95,7 +95,7 @@
     "assign_scenario_error_game_create": "Scenario assigned, but failed to create game: %v",
     "assign_roles_prompt": "Please provide a game ID: /assign_roles <game_id>",
     "assign_roles_success_public": "Roles assigned for game %s. Check your private messages for your role!",
-    "assign_roles_success_private": "نقش شما ||*%s* در ساید *%s*|| هست\\.\n",
+    "assign_roles_success_private": "نقش: ||*%s*||\nساید: ||*%s*||",
     "assign_roles_error": "Error assigning roles for game '%s': %v",
     "assign_roles_error_game_find": "Game '%s' not found: %v",
     "assign_roles_error_no_scenario": "Game '%s' has no scenario assigned.",
