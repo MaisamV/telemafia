@@ -8,7 +8,7 @@ import (
 	messages "telemafia/internal/presentation/telegram/messages"
 	tgutil "telemafia/internal/shared/tgutil"
 
-	"gopkg.in/telebot.v3"
+	"gopkg.in/telebot.v4"
 )
 
 // HandleDeleteRoom handles the first step of /delete_room, showing the selection.

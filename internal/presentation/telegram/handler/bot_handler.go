@@ -29,7 +29,7 @@ import (
 	scenario "telemafia/internal/presentation/telegram/handler/scenario"
 	messages "telemafia/internal/presentation/telegram/messages" // Import messages package
 
-	"gopkg.in/telebot.v3"
+	"gopkg.in/telebot.v4"
 )
 
 // InteractiveSelectionState moved to tgutil package

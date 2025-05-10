@@ -5,7 +5,7 @@ import (
 
 	messages "telemafia/internal/presentation/telegram/messages"
 
-	"gopkg.in/telebot.v3"
+	"gopkg.in/telebot.v4"
 )
 
 // HandleGetInviteLinkCallback responds with the room's invite link.

@@ -18,7 +18,7 @@ import (
 	messages "telemafia/internal/presentation/telegram/messages"
 	sharedEntity "telemafia/internal/shared/entity"
 
-	"gopkg.in/telebot.v3"
+	"gopkg.in/telebot.v4"
 )
 
 // ---- Game Creation Callbacks ----

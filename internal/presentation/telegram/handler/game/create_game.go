@@ -11,7 +11,7 @@ import (
 	messages "telemafia/internal/presentation/telegram/messages"
 	"telemafia/internal/shared/tgutil"
 
-	"gopkg.in/telebot.v3"
+	"gopkg.in/telebot.v4"
 )
 
 // HandleCreateGame initiates the interactive game creation process.

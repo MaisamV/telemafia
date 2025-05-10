@@ -9,7 +9,7 @@ import (
 	messages "telemafia/internal/presentation/telegram/messages"
 	tgutil "telemafia/internal/shared/tgutil"
 
-	"gopkg.in/telebot.v3"
+	"gopkg.in/telebot.v4"
 )
 
 // HandleAddScenarioJSON handles the /add_scenario_json command.

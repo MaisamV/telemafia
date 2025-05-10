@@ -6,7 +6,7 @@ import (
 
 	sharedEntity "telemafia/internal/shared/entity"
 
-	"gopkg.in/telebot.v3"
+	"gopkg.in/telebot.v4"
 )
 
 var adminIds []int64

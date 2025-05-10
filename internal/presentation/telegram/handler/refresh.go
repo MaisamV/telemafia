@@ -6,7 +6,7 @@ import (
 	"telemafia/internal/shared/tgutil"
 	"time"
 
-	"gopkg.in/telebot.v3"
+	"gopkg.in/telebot.v4"
 )
 
 func (h *BotHandler) RefreshMessages(book *tgutil.RefreshingMessageBook) {

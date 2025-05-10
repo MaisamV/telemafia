@@ -18,7 +18,7 @@ import (
 	"telemafia/internal/shared/event"
 	"time"
 
-	"gopkg.in/telebot.v3"
+	"gopkg.in/telebot.v4"
 )
 
 // EventPublisher implements event.Publisher

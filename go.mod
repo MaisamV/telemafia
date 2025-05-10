@@ -2,6 +2,6 @@ module telemafia
 
 go 1.22.3
 
-require gopkg.in/telebot.v3 v3.3.8
-
-require github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1 // indirect
+require (
+	gopkg.in/telebot.v4 v4.0.0-beta.4 // indirect
+)

@@ -9,7 +9,7 @@ import (
 	// Import messages
 	tgutil "telemafia/internal/shared/tgutil"
 
-	"gopkg.in/telebot.v3"
+	"gopkg.in/telebot.v4"
 	// Import necessary command/query handlers for callback routing
 )
 

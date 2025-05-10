@@ -10,7 +10,7 @@ import (
 	messages "telemafia/internal/presentation/telegram/messages"
 	tgutil "telemafia/internal/shared/tgutil"
 
-	"gopkg.in/telebot.v3"
+	"gopkg.in/telebot.v4"
 )
 
 // RefreshNotifier is defined in create_room.go (same package)

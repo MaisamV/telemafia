@@ -9,7 +9,7 @@ import (
 	sharedEntity "telemafia/internal/shared/entity"
 	"telemafia/internal/shared/tgutil"
 
-	"gopkg.in/telebot.v3"
+	"gopkg.in/telebot.v4"
 )
 
 // RoomDetailMessage generates the content and markup for the room detail view.

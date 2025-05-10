@@ -5,7 +5,7 @@ import (
 	room "telemafia/internal/presentation/telegram/handler/room" // Import room handlers
 	messages "telemafia/internal/presentation/telegram/messages" // Import messages
 
-	"gopkg.in/telebot.v3"
+	"gopkg.in/telebot.v4"
 	// room "telemafia/internal/presentation/telegram/handler/room"
 )
 
