@@ -28,9 +28,8 @@ func (h *BotHandler) RefreshMessages(book *tgutil.RefreshingMessageBook) {
 		_, editErr := h.bot.Edit(&telebot.Message{ID: payload.MessageID, Chat: &telebot.Chat{ID: payload.ChatID}}, newContent, newMarkup...)
 		if editErr != nil {
 			if !strings.Contains(editErr.Error(), "message is not modified") {
-				book.RemoveActiveMessage(chatID)
-			} else {
 				log.Printf(h.msgs.Refresh.ErrorEditRemoving, chatID, editErr)
+				book.RemoveActiveMessage(chatID)
 			}
 		}
 	}
