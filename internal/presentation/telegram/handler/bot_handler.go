@@ -366,8 +366,8 @@ func (h *BotHandler) GetPlayerRoleRefresher(gameID gameEntity.GameID) (*tgutil.R
 
 // RemovePlayerRoleActiveMessage Helper methods to remove player role active message from game choice refreshers safely
 func (h *BotHandler) RemovePlayerRoleActiveMessage(gameID gameEntity.GameID, userID int64) {
-	h.playerRefreshMutex.RLock()
-	defer h.playerRefreshMutex.RUnlock()
+	h.playerRefreshMutex.Lock()
+	defer h.playerRefreshMutex.Unlock()
 	book, exists := h.playerRoleChoiceRefreshers[gameID]
 	if exists {
 		book.RemoveActiveMessage(userID)
